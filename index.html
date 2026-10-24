@@ -66,6 +66,16 @@ button{font:inherit;color:inherit}
 #obj-text{margin:3px 0 0;font:var(--ui-w) 17px/1.25 var(--ui-font);text-wrap:balance}
 #obj-sub{margin:3px 0 0;font:500 14px/1.3 var(--ui-font);color:var(--ui-muted)}
 #app.truth #obj-sub{font-weight:400}
+.obj-head{display:flex;align-items:center;gap:8px;width:100%;min-height:26px;margin:-5px 0 -3px;padding:4px 0;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.obj-head:focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px;border-radius:4px}
+.obj-act{margin-left:auto;display:flex;align-items:center;gap:4px;padding-left:10px;font:var(--ui-w) 11px/1 var(--ui-font);letter-spacing:.08em;text-transform:uppercase;color:var(--ui-muted)}
+.obj-act svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.obj-new{display:inline-block;padding:2px 7px 1px;font:var(--ui-w) 10px/1.2 var(--ui-font);letter-spacing:.06em;text-transform:uppercase;border-radius:999px;background:var(--ui-accent);color:var(--ui-bg);animation:newPulse .8s ease-in-out infinite alternate}
+.obj-new[hidden]{display:none}
+@keyframes newPulse{to{transform:scale(1.12)}}
+#objective.collapsed{flex:0 0 auto;padding:7px 12px 6px}
+#objective.collapsed #obj-body{display:none}
+#objective.collapsed .obj-act svg{transform:rotate(180deg)}
 .hud-right{display:flex;gap:8px;align-items:flex-start;margin-left:auto}
 .stats{display:flex;gap:14px;padding:8px 12px 9px}
 .stat{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
@@ -239,10 +249,16 @@ button{font:inherit;color:inherit}
 
   <div id="hud" class="layer" hidden>
     <div class="hud-top" id="hud-top">
-      <section id="objective" class="card" aria-live="polite">
-        <span class="eyebrow" id="obj-label">Objective</span>
-        <p id="obj-text"></p>
-        <p id="obj-sub"></p>
+      <section id="objective" class="card">
+        <button type="button" class="obj-head" id="obj-toggle" aria-expanded="true" aria-controls="obj-body">
+          <span class="eyebrow" id="obj-label">Objective</span>
+          <span class="obj-new" id="obj-new" hidden>New</span>
+          <span class="obj-act"><span id="obj-act-text">Hide</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5 6 4l3.5 3.5"/></svg></span>
+        </button>
+        <div id="obj-body" aria-live="polite">
+          <p id="obj-text"></p>
+          <p id="obj-sub"></p>
+        </div>
       </section>
       <div class="hud-right">
         <div class="stats card">
@@ -257,7 +273,7 @@ button{font:inherit;color:inherit}
       </div>
     </div>
     <div class="keys card" id="keys">
-      <span><kbd>WASD</kbd>Move</span><span><kbd>Space</kbd>Glasses</span><span><kbd>Shift</kbd>Graze</span><span><kbd>E</kbd>Talk</span><span><kbd>B</kbd>Baa</span><span><kbd>Esc</kbd>Pause</span>
+      <span><kbd>WASD</kbd>Move</span><span><kbd>Space</kbd>Glasses</span><span id="k-graze"><kbd>Shift</kbd>Graze</span><span><kbd>E</kbd>Talk</span><span><kbd>B</kbd>Baa</span><span><kbd>Esc</kbd>Pause</span>
     </div>
   </div>
 
@@ -324,9 +340,9 @@ button{font:inherit;color:inherit}
       <p>You're a sheep at Greener Pastures Ranch. Find the glasses, find proof that the shepherds are wolves, and wake up 4 sheep. Then lead the flock to the gate.</p>
       <ul class="controls" id="how-controls"></ul>
       <ul class="tips">
-        <li>Wolves only notice a sheep wearing glasses. When a red cone sweeps your way, graze with your head down or take the glasses off.</li>
+        <li>Wolves only notice a sheep wearing glasses. When a red cone sweeps your way, graze with your head down or take the glasses off. The pastor is different: during prayer, he notices anyone whose head isn't bowed.</li>
         <li>Proof only shows up while you wear the glasses. Ask each sheep what's bothering them, then show them the proof that fits. The wrong proof makes them sulk.</li>
-        <li>There are more pastures than the one you can see. Try the barn doors, and ask Kevin about Sunny Acres.</li>
+        <li>There's more out there than the pasture you can see. Try the barn doors, visit the chapel, and ask Kevin about Sunny Acres.</li>
         <li>Getting caught or crying wolf costs Credibility. Lose all 3 and nobody believes you.</li>
       </ul>
       <div class="menu-actions"><button type="button" class="btn btn-big" id="btn-how-play">Play</button><button type="button" class="btn quiet" id="btn-how-back">Back</button></div>
@@ -674,6 +690,9 @@ const Snd = (() => {
     fanfare() { arp([72, 76, 79, 84, 88], 0.09, 'triangle', 0.15, 0.4); },
     door() { const t = now(); const o = osc('sawtooth', 170, t, 0.35, 0.05, 0.02); o.frequency.linearRampToValueAtTime(110, t + 0.35); noise(t, 0.3, 0.05, 900, 'bandpass', 2); },
     dig() { const t = now(); for (let i = 0; i < 4; i++) noise(t + i * 0.12, 0.08, 0.12, 500 + i * 120, 'bandpass', 1.5); },
+    organ() { const t = now(); [48, 55, 60, 64, 67, 72].forEach((m, i) => { osc('sine', mtof(m), t + i * 0.025, 1.7, 0.05, 0.14); osc('triangle', mtof(m + 12), t + i * 0.025, 1.3, 0.012, 0.14); }); },
+    amen() { const t = now(); [[53, 57, 60, 65], [48, 55, 60, 64]].forEach((ch, j) => ch.forEach((m) => { osc('sine', mtof(m), t + j * 0.5, 0.55 + j * 0.6, 0.045, 0.07); osc('triangle', mtof(m + 12), t + j * 0.5, 0.45 + j * 0.5, 0.01, 0.07); })); },
+    bell() { const t = now(), f = 392; [[0.5, 0.07, 2.6], [1, 0.1, 2.2], [1.19, 0.05, 1.7], [1.5, 0.045, 1.4], [2, 0.035, 1.2], [2.52, 0.02, 0.9], [3, 0.014, 0.7]].forEach(([r, v, d]) => osc('sine', f * r, t, d, v, 0.003)); },
     sniff() { const t = now(); noise(t, 0.07, 0.08, 4000, 'highpass', 0.7); noise(t + 0.12, 0.07, 0.08, 4200, 'highpass', 0.7); },
   };
   return {
@@ -757,7 +776,7 @@ const BLEATS = {
 };
 
 /* ---------------- the ranch ---------------- */
-const W = 3150, H = 1780;
+const W = 3150, H = 2420;
 const MW = 1500, MH = 1300; // the ranch itself; other pastures sit further out in the same world
 const FX0 = 60, FX1 = 1220, FY0 = 130, FY1 = 1050;
 const HOLE0 = 770, HOLE1 = 830;
@@ -797,7 +816,7 @@ const SIGNS = [
   { x: 860, y: 1112, w: 190, candy: 'DANGER! WOLVES OUT THERE!', truth: 'THE WOLVES ARE INSIDE' },
 ];
 for (const s of SIGNS) solid(s.x - 4, s.y - 5, s.x + 4, s.y, 'prop');
-const LOLLI = [[160, 880], [1100, 1000], [250, 800], [760, 176]];
+const LOLLI = [[160, 880], [1182, 1008], [250, 800], [760, 176]];
 for (const [x, y] of LOLLI) solid(x - 4, y - 5, x + 4, y, 'prop');
 
 const PATHS = [
@@ -986,7 +1005,7 @@ const REGIONS = {
   field: { x0: 1880, y0: 1040, x1: 2920, y1: 1780, ix0: 1926, iy0: 1146, ix1: 2874, iy1: 1640 },
 };
 function regionOf(x, y) {
-  for (const k of ['acres', 'field']) { const r = REGIONS[k]; if (x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) return k; }
+  for (const k of ['acres', 'field', 'church']) { const r = REGIONS[k]; if (x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) return k; }
   return 'ranch';
 }
 // keep the ranch closed now that the world is wider than it
@@ -1100,7 +1119,7 @@ Object.assign(LINES.nana, {
   ACH.pasture = ['Same Pasture', 'Find out where both barn doors lead'];
   ACH.pastures = fin;
 }
-const WOKE_GOAL = 4, PROOF_COUNT = PROOF_DEFS.length;
+const WOKE_GOAL = 4; // PROOF_COUNT is set once the chapel adds its proof
 
 /* decor for the new pastures */
 const ACRES_FLOWERS = [], FIELD_FLOWERS = [];
@@ -1117,6 +1136,110 @@ for (let i = 0; i < 150; i++) {
 const REGION_TREES = [];
 for (let x = 1900; x < 3110; x += 62 + R() * 30) REGION_TREES.push({ x, y: 40 + R() * 40, s: 0.85 + R() * 0.3 });
 for (let x = 1900; x < 2910; x += 60 + R() * 30) REGION_TREES.push({ x, y: 1090 + R() * 30, s: 0.8 + R() * 0.3 });
+
+/* ---------------- the chapel: Sunday service with Pastor Fleecewell ---------------- */
+// Outside: a little chapel in the southeast corner of the ranch. Inside: its own walled room, far below the ranch.
+const CHAPEL = { x0: 955, y0: 860, x1: 1125, y1: 930, door: 1040 };
+solid(CHAPEL.x0, CHAPEL.y0, CHAPEL.x1, CHAPEL.y1, 'building', true);
+const CHAPEL_SIGN = { x: 845, y: 994 };
+solid(CHAPEL_SIGN.x - 4, CHAPEL_SIGN.y - 5, CHAPEL_SIGN.x + 4, CHAPEL_SIGN.y, 'prop');
+PATHS.push([[628, 915], [830, 946], [1040, 950]]);
+{
+  const np = PATHS[PATHS.length - 1];
+  const nearPath = (x, y, w) => { for (let i = 1; i < np.length; i++) if (distToSeg(x, y, np[i - 1][0], np[i - 1][1], np[i][0], np[i][1]) < w) return true; return false; };
+  const onChapel = (x, y, pad) => x > CHAPEL.x0 - pad && x < CHAPEL.x1 + pad && y > CHAPEL.y0 - pad - 30 && y < CHAPEL.y1 + pad;
+  for (let i = FLOWERS.length - 1; i >= 0; i--) { const f = FLOWERS[i]; if (onChapel(f.x, f.y, 14) || nearPath(f.x, f.y, 22) || dist(f.x, f.y, CHAPEL_SIGN.x, CHAPEL_SIGN.y) < 26) FLOWERS.splice(i, 1); }
+  for (let i = TUFTS_IN.length - 1; i >= 0; i--) if (onChapel(TUFTS_IN[i][0], TUFTS_IN[i][1], 4)) TUFTS_IN.splice(i, 1);
+}
+
+REGIONS.church = { x0: 160, y0: 1600, x1: 1340, y1: 2320, ix0: 250, iy0: 1720, ix1: 1250, iy1: 2280 };
+const NAVE = { x0: 250, y0: 1722, x1: 1250, y1: 2278, aisle: 750 };
+// walls are opaque, so nobody sees through them
+solid(230, 1700, 1270, 1722, 'wall', true);
+solid(230, 1700, 250, 2300, 'wall', true); solid(1250, 1700, 1270, 2300, 'wall', true);
+solid(230, 2278, 1270, 2300, 'wall', true);
+const CHANCEL = { x0: 560, y0: 1722, x1: 940, y1: 1822 };
+solid(CHANCEL.x0, CHANCEL.y0, CHANCEL.x1, CHANCEL.y1, 'stage');
+const ORGAN = { x0: 290, y0: 1722, x1: 462, y1: 1786 };
+solid(ORGAN.x0, ORGAN.y0, ORGAN.x1, ORGAN.y1, 'prop');
+// the pastor's study, next to the pulpit
+const VESTRY = { x0: 1000, y0: 1722, x1: 1250, y1: 1864, g0: 1150, g1: 1206 };
+solid(1000, 1722, 1012, 1864, 'wall', true);
+solid(1000, 1852, VESTRY.g0, 1864, 'wall', true); solid(VESTRY.g1, 1852, 1250, 1864, 'wall', true);
+const VDESK = { x0: 1150, y0: 1740, x1: 1236, y1: 1772 };
+solid(VDESK.x0, VDESK.y0, VDESK.x1, VDESK.y1, 'prop');
+const RACK = { x: 1062, y: 1770 };
+solid(RACK.x - 26, RACK.y - 8, RACK.x + 26, RACK.y, 'prop');
+const PEWS = [];
+for (const y of [1900, 1980, 2060, 2140]) for (const [x0, x1] of [[380, 690], [810, 1120]]) { PEWS.push({ x0, x1, y }); solid(x0, y, x1, y + 12, 'pew'); }
+const PILLARS = [[300, 1960], [300, 2120], [1200, 1960], [1200, 2120]];
+for (const [x, y] of PILLARS) solid(x - 13, y - 13, x + 13, y + 13, 'pillar', true);
+
+const CHURCH_SIGN = { x: 540, y: 2252, w: 206, candy: 'GIVE AND YE SHALL RECEIVE', truth: 'GIVE AND WE SHALL RECEIVE' };
+SIGNS.push(CHURCH_SIGN); solid(CHURCH_SIGN.x - 4, CHURCH_SIGN.y - 5, CHURCH_SIGN.x + 4, CHURCH_SIGN.y, 'prop');
+
+PORTALS.push(
+  { id: 'chapel', region: 'ranch', x: CHAPEL.door, y: 944, r: 32, to: 'chapelOut', label: 'Go to Sunday service', labelTruth: 'Go into the chapel', arrive: [CHAPEL.door, 970] },
+  { id: 'chapelOut', region: 'church', x: NAVE.aisle, y: 2262, r: 34, to: 'chapel', label: 'Leave the chapel', labelTruth: 'Get out of here', arrive: [NAVE.aisle, 2238] },
+);
+
+/* the congregation */
+SHEEP_DEFS.push(
+  { id: 'ewenice', name: 'Sister Ewenice', kind: 'key', x: 486, y: 1810, wander: 0, home: 'church', needs: 'fleece' },
+  { id: 'bleatrice', name: 'Bleatrice', kind: 'flock', x: 440, y: 1930, wander: 0, home: 'church',
+    say: ["Shh! Pastor's preaching.", 'I put my best fleece in the plate. It went somewhere wonderful.'],
+    saySpecs: "Glasses? In church? Take those off. They're very... negative." },
+  { id: 'shearon', name: 'Shearon', kind: 'flock', x: 620, y: 2010, wander: 0, home: 'church',
+    say: ['The fence keeps the wolves out. Pastor says so every Sunday!', 'I never miss a service. We have one every day.'],
+    saySpecs: 'Have you noticed Pastor never takes off his robe? Not even in summer?' },
+  { id: 'ewegene', name: 'Ewegene', kind: 'flock', x: 880, y: 1930, wander: 0, home: 'church',
+    say: ['Every head bowed, every eye closed. Best part of the week. So restful.'],
+    saySpecs: 'Every time I bow my head, I come up a little colder. Funny, that.' },
+  { id: 'fleecil', name: 'Fleecil', kind: 'flock', x: 1060, y: 2090, wander: 0, home: 'church',
+    say: ['I asked Pastor a question once. ONCE.'],
+    saySpecs: 'Where does the plate GO after the service?' },
+  { id: 'lambuel', name: 'Lambuel', kind: 'flock', x: 480, y: 2170, wander: 0, home: 'church',
+    say: ["Pastor says it's all gray outside the fence. I wouldn't know. I've never been."],
+    saySpecs: 'Is it just me, or does Pastor have a tail?' },
+  { id: 'woolma', name: 'Woolma', kind: 'flock', x: 960, y: 2170, wander: 0, home: 'church',
+    say: ['Sister Ewenice plays the organ beautifully. Pastor says she plays it too loud.'],
+    saySpecs: "Sister Ewenice always says, 'Watch for wolves in sheep's clothing.' Pastor tells her to hush." },
+);
+FLOCK_LINES[3] = 'The fence keeps the wolves out! Pastor Fleecewell says so every Sunday. The chapel is right over there.';
+
+WOLF_DEFS.push(
+  { id: 'pastor', name: 'Pastor Fleecewell', type: 'pastor', x: NAVE.aisle, y: 1806, behavior: 'sweep', base: Math.PI / 2, amp: 0.82, freq: 0.5, range: 470, half: 0.34, dir: Math.PI / 2 },
+  { id: 'usher', name: 'Usher Howlett', type: 'usher', x: 330, y: 1880, behavior: 'patrol', path: [[330, 1880], [330, 2200], [1166, 2200], [1166, 1880]], range: 150, half: 0.55, speed: 46, dir: Math.PI / 2 },
+);
+Object.assign(CAUGHT_LINES, {
+  pastor: 'Peeking during prayer, child? Tsk. I see everything. Usher, to the clinic.',
+  usher: "Excuse me. The plate goes around ONCE. You're coming with me.",
+});
+
+PROOF_DEFS.push({ id: 'fleece', x: 1074, y: 1806, name: "The pastor's spare sheep suit", short: 'the spare sheep suit', title: "Pastor Fleecewell's closet",
+  lines: [['Sheep suit, size Wolf XL', '1'], ['Laundry tag', 'Wash after every service'], ["This week's collection", '212 wool'], ['Sent up to the ranch', '212 wool']],
+  note: 'Sermon notes: keep their heads bowed while the plate goes around. And ZIP UP.' });
+
+LINES.ewenice = {
+  pron: 'her',
+  intro: 'Bless you, child! Pastor Fleecewell says the fence keeps the wolves out, and the plate keeps the fence up. Now hush, I have to play.',
+  prompt: 'Yes, child?',
+  ask: 'What does the Good Book say about wolves?',
+  reply: "Oh, plenty! 'Beware of false prophets, which come to you in sheep's clothing, but inwardly they are ravenous wolves.' Matthew 7:15. Pastor says that one is about the South Pasture.",
+  hint: "Hint: Sister Ewenice is watching for a wolf in sheep's clothing. Pastor Fleecewell's study is next to the pulpit.",
+  proofOK: "A sheep suit... in a wolf's size? 'Keep their heads bowed while the plate goes around'? Sheep's clothing. Ravenous wolves. It was in the Book the whole time, and I let him read it to me.",
+  proofNo: "Child, that is not scripture. Now hush, he's preaching.",
+  wolf: 'Hush! Not during the sermon!',
+  lendOK: "Lord have mercy. Pastor's robe has a ZIPPER. And a tail.",
+  lendNo: 'AAAH! Devil specs! PASTOR!',
+  woke: "When your flock gathers, I'll ring the chapel bell. My congregation always comes when the bell rings. And no more plate.",
+};
+{
+  const fin = ACH.pastures; delete ACH.pastures;
+  ACH.flock = ['Let My Flock Go', 'Have Sister Ewenice ring the bell for the stampede'];
+  ACH.pastures = fin;
+}
+const PROOF_COUNT = PROOF_DEFS.length;
 
 /* ---------------- sheep ---------------- */
 const PUFFS = [[-14, 3, 7.5], [-9, -5, 9], [0, -8, 9.5], [9, -5, 8.5], [14, 3, 7], [7, 8, 8], [-3, 9, 8], [-12, 8, 7], [0, 1, 11]];
@@ -1205,6 +1328,12 @@ function drawSheep(s, isP, opt) {
     ctx.moveTo(-2, -12); ctx.lineTo(3.5, -17.5); ctx.lineTo(4.5, -9.5); ctx.closePath(); ctx.fill();
     fillC('bow', -2, -12.2, 2);
   }
+  if (s.id === 'ewenice') {
+    fillE('shawl', -1, -10.5, 11.5, 3.2, -0.12);
+    ctx.fillStyle = P('shawl'); rrect(-6.5, -19.5, 12, 9.5, 4.5); ctx.fill();
+    fillR('bow', -6.5, -13, 12, 2.2);
+    fillC('bow', 4.6, -15.8, 2.7); fillC('tag', 4.6, -15.8, 1.1);
+  }
   if (s.id === 'gerald') {
     fillE('candyA', -1, -11, 9.5, 5.5, -0.15); fillE('candyA', 1, -15, 7, 4.5, -0.1); fillC('candyA', 4, -18, 3.4);
     ctx.strokeStyle = P('candyB'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-8, -10); ctx.lineTo(7, -13); ctx.stroke();
@@ -1279,6 +1408,7 @@ function drawWolf(w, opt) {
   if (w.type === 'tower') { ctx.restore(); drawTower(w); return; }
   if (w.type === 'dog') { drawDog(w); ctx.restore(); return; }
   if (w.type === 'twohead') { drawTwoHead(w, wolfy); ctx.restore(); return; }
+  if (w.type === 'pastor') { drawPastor(w, wolfy, portrait); ctx.restore(); return; }
   ctx.scale(w.facing || 1, 1);
   const moving = w.walk > 0.1;
   const bob = moving ? Math.abs(Math.sin(w.phase)) * 1.6 : 0;
@@ -1294,7 +1424,7 @@ function drawWolf(w, opt) {
     ctx.strokeStyle = P('crook'); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath();
     ctx.moveTo(-13, bob - 1); ctx.lineTo(-13, -74); ctx.arc(-7.5, -74, 5.5, Math.PI, TAU); ctx.lineTo(-2, -70); ctx.stroke();
   }
-  const armK = w.type === 'granny' ? 'shirtG' : w.type === 'doctor' || w.type === 'chef' ? 'coat' : 'shirtW';
+  const armK = w.type === 'usher' ? 'suit' : w.type === 'granny' ? 'shirtG' : w.type === 'doctor' || w.type === 'chef' ? 'coat' : 'shirtW';
   const handK = wolfy ? 'fur' : 'skin';
   ctx.lineCap = 'round'; ctx.strokeStyle = P(armK); ctx.lineWidth = 6;
   const bx = w.type === 'shepherd' ? -12.5 : -12, byy = w.type === 'shepherd' ? -30 : -27 + sw * 0.4;
@@ -1313,6 +1443,10 @@ function drawWolf(w, opt) {
     fillR('coat', -12, -48, 24, 30, 7);
     for (const by of [-43, -37, -31]) { fillC('steth', -3, by, 1.2); fillC('steth', 4, by, 1.2); }
     ctx.fillStyle = P('awnA'); ctx.beginPath(); ctx.moveTo(-9, -30); ctx.lineTo(9, -30); ctx.lineTo(12, -8); ctx.lineTo(-12, -8); ctx.closePath(); ctx.fill();
+  } else if (w.type === 'usher') {
+    fillR('suit', -11, -48, 22, 28, 6);
+    ctx.fillStyle = P('apron'); ctx.beginPath(); ctx.moveTo(-4, -48); ctx.lineTo(4, -48); ctx.lineTo(0, -37); ctx.closePath(); ctx.fill();
+    fillR('band', -3.6, -47.5, 7.2, 3, 1.2); fillC('awnA', 6.5, -42, 1.8);
   } else {
     fillR('shirtW', -9, -48, 18, 26, 6);
     ctx.fillStyle = P('coat'); ctx.beginPath(); ctx.moveTo(-12, -48); ctx.lineTo(-2, -48); ctx.lineTo(1, -40); ctx.lineTo(4, -48); ctx.lineTo(12, -48); ctx.lineTo(14, -13); ctx.lineTo(-14, -13); ctx.closePath(); ctx.fill();
@@ -1324,6 +1458,7 @@ function drawWolf(w, opt) {
   ctx.strokeStyle = P(armK); ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(7, -44); ctx.lineTo(fx, fy); ctx.stroke(); fillC(handK, fx, fy, 3.3);
   if (!w.waving && !w.hatOff) {
     if (w.type === 'granny') fillR('candyA', fx - 1, fy - 9, 8, 7, 1.5);
+    if (w.type === 'usher') drawPlate(fx, fy, wolfy);
     if (w.type === 'doctor') { fillR('wood', fx - 2, fy - 11, 9, 12, 1); fillR('apron', fx - 0.5, fy - 9, 6, 8); }
     if (w.type === 'chef') {
       if (wolfy) { ctx.strokeStyle = P('steth'); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(fx + 1, fy - 22); ctx.lineTo(fx, fy + 6); ctx.stroke(); fillE('iron', fx, fy + 8, 5, 3.5); }
@@ -1340,7 +1475,7 @@ function drawWolf(w, opt) {
       if (wolfy) { fillR('coat', -8, hy - 24 - hb, 16, 14, 3); ctx.fillStyle = P('coat'); circles([[-6, hy - 26 - hb, 6], [0, hy - 29 - hb, 7], [6, hy - 26 - hb, 6]]); ctx.fill(); fillR('apron', -8, hy - 13 - hb, 16, 3); }
       else { fillR('awnA', -10, hy - 10 - hb, 20, 4, 2); fillE('awnA', 8, hy - 7.5 - hb, 7, 2.4); }
     }
-    else headMirror(hy, hb);
+    else if (w.type !== 'usher') headMirror(hy, hb);
   }
   if (wolfy) wolfEars(hy);
   ctx.restore();
@@ -1724,6 +1859,7 @@ function drawRegionGrounds() {
       ctx.fillStyle = cols[(f.ph * 10 | 0) % 2]; circles([[x - 2.6, y, 2.3 * f.s], [x + 2.6, y, 2.3 * f.s], [x, y - 2.6, 2.3 * f.s], [x, y + 2.6, 2.3 * f.s]]); ctx.fill();
     }
   }
+  drawChurchGround();
 }
 
 /* Sunny Acres */
@@ -1952,6 +2088,339 @@ function drawTower(w) {
   ctx.restore();
 }
 
+/* ---------------- drawing the chapel ---------------- */
+Object.assign(PAL_SRC, {
+  chOut: ['#3B2A55', '#1E1D1B', '#3A3530'],
+  floor: ['#FFE3C2', '#67615A', '#B8946F'], floor2: ['#F5CFA2', '#5C5650', '#A8845F'],
+  carpet: ['#FF6FA8', '#5A4A48', '#8E3B3B'], carpetSh: ['#E8558F', '#4C3E3C', '#7A3232'],
+  chWall: ['#FFF3FA', '#7A766F', '#E8E1D2'], chWallSh: ['#F4CDE2', '#5F5B55', '#C9C0AE'],
+  chRoof: ['#B69CFF', '#55524D', '#6B4F3A'], chRoofSh: ['#9479F0', '#47443F', '#5C4330'],
+  robe: ['#8E6CFF', '#4B4651', '#5B4A78'], robeSh: ['#7352E6', '#3D3943', '#4A3B63'],
+  stole: ['#FFE07A', '#A29D92', '#D9B95F'], pipe: ['#FFE07A', '#8A857C', '#C9B27A'], pipeSh: ['#F2C14C', '#6E6A62', '#A8925E'],
+  flame: ['#FFC23D', '#E8A33A', '#F2B54A'],
+});
+for (const k of Object.keys(PAL_SRC)) if (!PAL[k]) PAL[k] = PAL_SRC[k].map(hex);
+const GLASS_COLS = [['#FF5FA2', '#FFE14D', '#7FD8FF', '#B69CFF', '#7BE38F'], ['#6E6A64', '#85817A', '#5E5A55', '#77736C', '#8E8A82'], ['#C98A8A', '#D9C27A', '#8AB0C9', '#A894C9', '#8EBF8A']];
+const glassCols = () => GLASS_COLS[RR > 0.5 ? 2 : RT > 0.5 ? 1 : 0];
+const tri = (ax, ay, bx, by, cx, cy) => { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx, cy); ctx.closePath(); };
+function archPath(x, y0, w, h) { const r = w / 2; ctx.beginPath(); ctx.moveTo(x - r, y0 + h); ctx.lineTo(x - r, y0 + r); ctx.arc(x, y0 + r, r, Math.PI, TAU); ctx.lineTo(x + r, y0 + h); ctx.closePath(); }
+function drawArchWindow(x, y0, w, h) {
+  ctx.fillStyle = P('trim'); archPath(x, y0 - 3, w + 6, h + 5); ctx.fill();
+  const cols = glassCols(), n = 3, sw = w / n;
+  ctx.save(); archPath(x, y0, w, h); ctx.clip();
+  for (let i = 0; i < n; i++) for (let j = 0; j < 4; j++) { ctx.fillStyle = cols[(i + j * 2) % cols.length]; ctx.fillRect(x - w / 2 + i * sw, y0 + (j * h) / 4, sw + 0.5, h / 4 + 0.5); }
+  ctx.restore();
+  ctx.strokeStyle = P('ink'); ctx.lineWidth = 1.1; archPath(x, y0, w, h); ctx.stroke();
+  ctx.beginPath(); for (let i = 1; i < n; i++) { ctx.moveTo(x - w / 2 + i * sw, y0 + 4); ctx.lineTo(x - w / 2 + i * sw, y0 + h); } for (let j = 1; j < 4; j++) { ctx.moveTo(x - w / 2, y0 + (j * h) / 4); ctx.lineTo(x + w / 2, y0 + (j * h) / 4); } ctx.stroke();
+}
+
+/* the pastor's head: a kindly sheep, or a wolf with a sheep mask pushed up like a hood */
+function pastorHead(hy, wolfy, open) {
+  if (!wolfy) {
+    ctx.fillStyle = P('woolSh'); circles([[-6, hy - 6, 7.5], [1, hy - 10, 8.5], [-9, hy + 2, 6.5]]); ctx.fill();
+    ctx.fillStyle = P('wool'); circles([[-6, hy - 7, 6.5], [1, hy - 11, 7.5], [-9, hy + 1, 5.5], [7, hy - 8, 5]]); ctx.fill();
+    fillE('faceSh', -3, hy - 3, 5.5, 2.4, -0.5);
+    fillE('face', 4, hy + 2, 8, 9.5);
+    fillE('face', 10.5, hy - 4.5, 4.6, 2.1, 0.6);
+    ctx.fillStyle = P('wool'); circles([[1, hy - 6, 4.2], [6, hy - 7.5, 3.6]]); ctx.fill();
+    eye(2.2, hy + 1, open ? 'open' : 'happy'); eye(8.2, hy + 1, open ? 'open' : 'happy');
+    fillE('cheek', 0.5, hy + 6, 2.2, 1.4);
+    ctx.strokeStyle = P('pupil'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(6.5, hy + 6, 2.4, 0.25, Math.PI - 0.55); ctx.stroke();
+    return;
+  }
+  ctx.fillStyle = P('woolSh'); circles([[-7, hy - 2, 9.5], [-3, hy - 9, 9.5], [5, hy - 11, 7.5], [-9, hy + 7, 5.5]]); ctx.fill();
+  ctx.fillStyle = P('wool'); circles([[-7, hy - 3, 8.5], [-3, hy - 10, 8.5], [5, hy - 12, 6.5], [-9, hy + 6, 4.6]]); ctx.fill();
+  wolfHead(hy);
+  if (open) { ctx.fillStyle = 'rgba(255,226,90,0.35)'; circles([[2.6, hy - 2.6, 4.6], [8.3, hy - 2.9, 4.4]]); ctx.fill(); }
+  ctx.save(); ctx.translate(1, hy - 15); ctx.rotate(-0.35);
+  ctx.fillStyle = P('wool'); circles([[-7.5, -1, 3.4], [-4, -5, 3.6], [1, -6.2, 3.6], [5.8, -4.4, 3.4], [8, 0.5, 3]]); ctx.fill();
+  fillE('face', 0, 0, 7.6, 5.3);
+  fillC('eyeW', -2.7, -0.7, 2.1); fillC('eyeW', 2.9, -0.7, 2.1);
+  fillC('pupil', -2.3, -0.4, 1.05); fillC('pupil', 3.3, -0.4, 1.05);
+  ctx.strokeStyle = P('pupil'); ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-3, 2.4); ctx.lineTo(3, 2.4);
+  for (let i = -2; i <= 2; i += 2) { ctx.moveTo(i, 1.5); ctx.lineTo(i, 3.3); }
+  ctx.stroke();
+  ctx.restore();
+  wolfEars(hy);
+}
+function drawPastor(w, wolfy, portrait) {
+  const t = G.clock, mv = RM ? 0 : 1, hy = -60, C = G.church || {};
+  const pray = C.mode === 'pray' || C.mode === 'warn', preach = !!w.bubble && !pray;
+  const hand = (x, y) => {
+    if (!wolfy) { fillE('legs', x, y, 3.3, 3.6); return; }
+    fillC('fur', x, y, 3.5);
+    ctx.strokeStyle = P('teeth'); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(x + 2.2, y - 2.6); ctx.lineTo(x + 4.6, y - 3.8); ctx.moveTo(x + 3, y); ctx.lineTo(x + 5.4, y); ctx.stroke();
+  };
+  const sc = portrait ? 1 : 1.18;
+  ctx.scale((w.facing || 1) * sc, sc);
+  if (wolfy) {
+    ctx.fillStyle = P('fur'); ctx.beginPath(); ctx.moveTo(-8, -32);
+    ctx.quadraticCurveTo(-31, -36 + Math.sin(t * 3) * 2 * mv, -25, -15); ctx.quadraticCurveTo(-18, -24, -7, -26); ctx.closePath(); ctx.fill();
+    fillE('furLt', -25, -17, 3, 2.2, 0.4);
+  }
+  const back = pray ? [-20, -71 + Math.sin(t * 2) * 1.5 * mv] : [-13, -30];
+  ctx.lineCap = 'round'; ctx.strokeStyle = P('robeSh'); ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(-7, -46); ctx.lineTo(back[0], back[1]); ctx.stroke();
+  hand(back[0], back[1]);
+  ctx.fillStyle = P('robe'); ctx.beginPath(); ctx.moveTo(-10, -51); ctx.lineTo(10, -51); ctx.lineTo(16, 0); ctx.lineTo(-16, 0); ctx.closePath(); ctx.fill();
+  fillR('robeSh', -16, -8, 32, 8);
+  fillR('stole', -7.5, -49, 3.5, 47, 1); fillR('stole', 4, -49, 3.5, 47, 1);
+  if (wolfy) {
+    ctx.fillStyle = P('wool'); circles([[-6, -49, 4], [0, -51, 4.4], [6, -49, 4]]); ctx.fill();
+    ctx.strokeStyle = P('nose'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, -46); ctx.lineTo(0, -6); ctx.stroke();
+    ctx.lineWidth = 0.9; ctx.beginPath(); for (let y = -44; y < -8; y += 3) { ctx.moveTo(-1.8, y); ctx.lineTo(1.8, y); } ctx.stroke();
+    fillR('steth', -2, -42, 4, 6, 1);
+  } else fillR('apron', -5, -52, 10, 3.6, 1.5);
+  let fx = 14, fy = -30;
+  if (pray) { fx = 21; fy = -71 + Math.sin(t * 2 + 1) * 1.5 * mv; }
+  else if (preach) { fx = 18; fy = -62 + Math.sin(t * 7) * 6 * mv; }
+  ctx.strokeStyle = P('robe'); ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(7, -46); ctx.lineTo(fx, fy); ctx.stroke();
+  hand(fx, fy);
+  pastorHead(hy, wolfy, pray);
+}
+function drawPlate(x, y, wolfy) {
+  fillE('woodSh', x + 4, y - 3, 10.5, 4); fillE('wood', x + 4, y - 4, 8.5, 3);
+  if (wolfy) { ctx.fillStyle = P('wool'); circles([[x + 1, y - 6, 2.6], [x + 5, y - 7.4, 3], [x + 8.5, y - 5.6, 2.4]]); ctx.fill(); }
+  else fillE('carpet', x + 4, y - 4.3, 6, 1.8);
+}
+
+/* the prayer: while he says "every head bowed", the pastor sees everything he has a line of sight to */
+function drawPrayGaze(w, k) {
+  const x = w.x, y = w.y - 36, N = 44, R = 760, pulse = RM ? 1 : 0.85 + 0.15 * Math.sin(G.clock * 5);
+  ctx.beginPath(); ctx.moveTo(x, y);
+  for (let i = 0; i <= N; i++) { const a = 0.04 + ((Math.PI - 0.08) * i) / N, L = rayLen(x, y, a, R); ctx.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); }
+  ctx.closePath();
+  const c = isTruthPass() ? '255,230,160' : '255,206,110';
+  const g = ctx.createRadialGradient(x, y, 20, x, y, R);
+  g.addColorStop(0, 'rgba(' + c + ',' + (0.5 * k * pulse).toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + c + ',' + (0.12 * k).toFixed(3) + ')');
+  ctx.fillStyle = g; ctx.fill();
+  if (w.alert > 0.04) { ctx.fillStyle = 'rgba(220,60,40,' + (w.alert * 0.32).toFixed(2) + ')'; ctx.fill(); }
+  ctx.strokeStyle = 'rgba(' + c + ',' + (0.7 * k).toFixed(2) + ')'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+/* ground and walls */
+function drawChurchGround() {
+  const C = REGIONS.church;
+  if (!regionInVB({ x0: C.x0 - 320, y0: C.y0 - 260, x1: C.x1 + 320, y1: C.y1 + 260 })) return;
+  ctx.fillStyle = P('chOut'); ctx.fillRect(C.x0 - 320, C.y0 - 260, C.x1 - C.x0 + 640, C.y1 - C.y0 + 520);
+  const { x0, y0, x1, y1 } = NAVE;
+  fillR('floor', x0, y0, x1 - x0, y1 - y0);
+  ctx.strokeStyle = P('floor2'); ctx.lineWidth = 2; ctx.beginPath();
+  for (let y = y0 + 22, r = 0; y < y1; y += 22, r++) {
+    ctx.moveTo(x0, y); ctx.lineTo(x1, y);
+    for (let x = x0 + (r % 2 ? 40 : 100); x < x1; x += 120) { ctx.moveTo(x, y - 22); ctx.lineTo(x, y); }
+  }
+  ctx.stroke();
+  fillR('carpetSh', 706, CHANCEL.y1, 88, y1 - CHANCEL.y1); fillR('carpet', 712, CHANCEL.y1, 76, y1 - CHANCEL.y1);
+  fillR('carpetSh', 712, 2240, 76, 36, 4);
+  fillR('woodSh', CHANCEL.x0 - 4, CHANCEL.y0, CHANCEL.x1 - CHANCEL.x0 + 8, CHANCEL.y1 - CHANCEL.y0 + 8);
+  fillR('wood', CHANCEL.x0, CHANCEL.y0, CHANCEL.x1 - CHANCEL.x0, CHANCEL.y1 - CHANCEL.y0 - 6);
+  fillR('carpet', 696, CHANCEL.y0, 108, CHANCEL.y1 - CHANCEL.y0 - 6);
+  fillR('board', CHANCEL.x0, CHANCEL.y1 - 6, CHANCEL.x1 - CHANCEL.x0, 2.5);
+  fillR('floor2', VESTRY.x0 + 12, VESTRY.y0, VESTRY.x1 - VESTRY.x0 - 12, VESTRY.y1 - VESTRY.y0 - 12);
+  fillE('carpetSh', 1112, 1808, 74, 28); fillE('carpet', 1112, 1808, 62, 22);
+  fillR('chWallSh', 230, 1596, 20, 706); fillR('chWall', 230, 1596, 6, 706);
+  fillR('chWallSh', 1250, 1596, 20, 706); fillR('chWall', 1264, 1596, 6, 706);
+}
+function drawChurchBackWall() {
+  const tr = isTruthPass();
+  fillR('chWall', 230, 1596, 1040, 126);
+  fillR('chWallSh', 230, 1684, 1040, 38); fillR('trim', 230, 1682, 1040, 3); fillR('chWallSh', 230, 1596, 1040, 5);
+  for (let i = 0; i < 11; i++) {
+    const x = 299 + i * 15, h = 100 - Math.abs(i - 5) * 8, y = 1716 - h;
+    fillR('pipeSh', x, y, 12, h, 3); fillR('pipe', x + 1.5, y, 7, h, 3); fillR('pipeSh', x + 3, y + h - 28, 6, 5, 2);
+  }
+  fillR('wood', 486, 1624, 76, 54, 4); fillR('board', 490, 1628, 68, 46, 3);
+  text('TITHE', 524, 1641, 11, tr ? F_TRUTH : F_CANDY, P('ink'), 60);
+  text(tr ? '100%' : '10%', 524, 1661, 17, tr ? F_TRUTH : F_CANDY, P('sackInk'), 60);
+  drawArchWindow(612, 1614, 40, 66); drawArchWindow(888, 1614, 40, 66);
+  fillC('trim', 750, 1629, 25);
+  const cols = glassCols();
+  for (let i = 0; i < 10; i++) { ctx.fillStyle = cols[i % cols.length]; ctx.beginPath(); ctx.moveTo(750, 1629); ctx.arc(750, 1629, 22, (i * TAU) / 10, ((i + 1) * TAU) / 10); ctx.closePath(); ctx.fill(); }
+  fillC('glass', 750, 1629, 12.5);
+  ctx.save(); ctx.beginPath(); ctx.arc(750, 1629, 12.5, 0, TAU); ctx.clip(); ctx.translate(745, 1636); ctx.scale(0.62, 0.62); pastorHead(-8, tr, false); ctx.restore();
+  ctx.strokeStyle = P('ink'); ctx.lineWidth = 1.1; circ(750, 1629, 22); ctx.stroke(); circ(750, 1629, 12.5); ctx.stroke();
+  fillR('wood', 636, 1656, 228, 30, 5); fillR('board', 640, 1659, 220, 24, 4);
+  signText('THE WOLVES ARE OUT THERE', 'THE WOLVES ARE UP HERE', 750, 1671.5, 14, 206);
+  // in the study: a portrait of the pastor
+  fillR('wood', 1098, 1616, 54, 62, 3); fillR(tr ? 'glass' : 'board', 1102, 1620, 46, 54, 2);
+  ctx.save(); ctx.beginPath(); ctx.rect(1102, 1620, 46, 54); ctx.clip(); ctx.translate(1121, 1664); ctx.scale(1.3, 1.3);
+  fillR('robe', -13, 0, 28, 14, 5); fillR('stole', -7, 0, 3, 12, 1); fillR('stole', 4, 0, 3, 12, 1); pastorHead(-9, tr, false); ctx.restore();
+}
+function drawOrgan() {
+  const { x0, x1, y1 } = ORGAN;
+  fillR('woodSh', x0 + 4, y1 - 50, x1 - x0 - 8, 50, 4); fillR('wood', x0 + 8, y1 - 46, x1 - x0 - 16, 38, 3);
+  fillR('woodSh', x0, y1 - 58, x1 - x0, 11, 3);
+  fillR('apron', x0 + 16, y1 - 31, x1 - x0 - 32, 9, 1.5);
+  for (let x = x0 + 21; x < x1 - 22; x += 9) fillR('nose', x, y1 - 31, 3.5, 5.5);
+  fillR('apron', x0 + 66, y1 - 80, 40, 22, 1.5);
+  ctx.strokeStyle = P('ink'); ctx.lineWidth = 0.8; ctx.beginPath();
+  for (let i = 0; i < 3; i++) { ctx.moveTo(x0 + 70, y1 - 75 + i * 6); ctx.lineTo(x0 + 102, y1 - 75 + i * 6); }
+  ctx.stroke();
+  ctx.fillStyle = P('ink'); for (const [nx, ny] of [[74, 73], [82, 70], [90, 67], [98, 64]]) { circ(x0 + nx, y1 - ny, 1.6); ctx.fill(); }
+}
+function drawCandle(x, y) {
+  fillR('iron', x - 1.5, y - 40, 3, 40); fillE('iron', x, y - 1, 7, 2.5); fillE('iron', x, y - 40, 5, 1.8);
+  fillR('apron', x - 3, y - 54, 6, 14, 1.5);
+  const fl = RM ? 0 : Math.sin(G.clock * 13 + x) * 1.2;
+  const g = ctx.createRadialGradient(x, y - 60, 1, x, y - 60, 18); g.addColorStop(0, 'rgba(255,214,110,0.45)'); g.addColorStop(1, 'rgba(255,214,110,0)');
+  ctx.fillStyle = g; circ(x, y - 60, 18); ctx.fill();
+  ctx.fillStyle = P('flame'); ctx.beginPath(); ctx.moveTo(x - 3, y - 54); ctx.quadraticCurveTo(x - 3 + fl, y - 60, x + fl * 0.5, y - 67); ctx.quadraticCurveTo(x + 3, y - 60, x + 3, y - 54); ctx.closePath(); ctx.fill();
+}
+function drawPulpit() {
+  const x = NAVE.aisle, y = 1834, tr = isTruthPass();
+  fillR('woodSh', x - 30, y - 50, 60, 50, 4); fillR('wood', x - 26, y - 46, 52, 42, 3);
+  fillR('woodSh', x - 35, y - 57, 70, 10, 3);
+  fillR('apron', x - 14, y - 63, 28, 7, 1.5); fillR(tr ? 'nose' : 'carpet', x - 15, y - 58, 30, 2.6, 1);
+  if (tr) {
+    ctx.fillStyle = P('woodSh'); circles([[x, y - 22, 5.5], [x - 6.5, y - 30, 2.6], [x - 2.2, y - 33, 2.6], [x + 2.2, y - 33, 2.6], [x + 6.5, y - 30, 2.6]]); ctx.fill();
+  } else {
+    ctx.fillStyle = P('carpet'); ctx.beginPath(); const hy = y - 30;
+    ctx.moveTo(x, hy + 9); ctx.bezierCurveTo(x - 11, hy + 1, x - 7, hy - 7, x, hy - 2); ctx.bezierCurveTo(x + 7, hy - 7, x + 11, hy + 1, x, hy + 9); ctx.fill();
+  }
+}
+function drawPew(p) {
+  const w = p.x1 - p.x0, tr = isTruthPass();
+  fillR('woodSh', p.x0, p.y - 20, w, 30, 4); fillR('wood', p.x0 + 3, p.y - 17, w - 6, 20, 3);
+  fillR('woodSh', p.x0 + 2, p.y + 8, w - 4, 9, 2);
+  fillR('woodSh', p.x0 - 3, p.y - 25, 9, 44, 3); fillR('woodSh', p.x1 - 6, p.y - 25, 9, 44, 3);
+  for (let x = p.x0 + 30; x < p.x1 - 24; x += 58) fillR(tr ? 'robeSh' : 'carpet', x, p.y - 12, 10, 7, 1);
+}
+function drawPillar(x, y) {
+  fillR('chWallSh', x - 17, y + 1, 34, 12, 3);
+  fillR('chWall', x - 11, y - 84, 22, 88); fillR('chWallSh', x + 4, y - 84, 7, 88);
+  fillR('chWallSh', x - 17, y - 94, 34, 12, 3); fillR('chWall', x - 15, y - 96, 30, 5, 2);
+}
+function drawChurchFrontWall() {
+  fillR('chWallSh', 230, 2276, 1040, 26); fillR('chWall', 230, 2271, 1040, 7);
+  fillR('wood', 698, 2266, 104, 36, 3); fillR('woodSh', 703, 2270, 46, 32, 2); fillR('woodSh', 751, 2270, 46, 32, 2);
+  fillC('tag', 744, 2286, 2); fillC('tag', 756, 2286, 2);
+  fillR('wood', 712, 2246, 76, 17, 3); fillR('board', 715, 2248, 70, 13, 2);
+  signText('GO IN PEACE', 'NO REFUNDS', 750, 2254.5, 9, 64);
+}
+function drawVestryWallL() { fillR('chWallSh', 1000, 1690, 12, 174); fillR('chWall', 999, 1686, 14, 8, 2); }
+function drawVestryWallB() {
+  for (const [a, b] of [[1000, VESTRY.g0], [VESTRY.g1, 1250]]) { fillR('chWallSh', a, 1826, b - a, 38); fillR('chWall', a, 1822, b - a, 7, 2); }
+  fillR('wood', VESTRY.g0 - 4, 1814, 7, 50, 2); fillR('wood', VESTRY.g1 - 3, 1814, 7, 50, 2);
+  fillR('wood', 1054, 1833, 90, 20, 3); fillR('board', 1057, 1835, 84, 16, 2);
+  signText("PASTOR'S STUDY", "PASTOR'S DEN", 1099, 1843.5, 9.5, 78);
+}
+function drawVestryDesk() {
+  const { x0, x1, y1 } = VDESK, tr = isTruthPass();
+  fillR('woodSh', x0, y1 - 36, x1 - x0, 36, 3); fillR('wood', x0 + 3, y1 - 33, x1 - x0 - 6, 18, 2);
+  fillR('woodSh', x0 - 3, y1 - 40, x1 - x0 + 6, 7, 3);
+  for (let i = 0; i < 4; i++) { fillE('woodSh', x0 + 20, y1 - 42 - i * 3.2, 12, 4); fillE('wood', x0 + 20, y1 - 43 - i * 3.2, 10, 3); }
+  for (const [sx, s] of [[x0 + 50, 1], [x0 + 68, 0.82]]) {
+    ctx.save(); ctx.translate(sx, y1 - 40); ctx.scale(s, s);
+    fillE('sack', 0, -10, 9, 10.5); fillE('sack', 0, -21, 5, 3.2); fillR('woodSh', -5, -20, 10, 2.2, 1);
+    text(tr ? 'WOOL' : 'TITHE', 0, -9, 6.5, tr ? F_TRUTH : F_CANDY, P('sackInk'), 15);
+    ctx.restore();
+  }
+}
+function drawRack() {
+  const { x, y } = RACK, tr = isTruthPass();
+  ctx.strokeStyle = P('iron'); ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath();
+  ctx.moveTo(x - 24, y); ctx.lineTo(x - 24, y - 78); ctx.lineTo(x + 24, y - 78); ctx.lineTo(x + 24, y);
+  ctx.moveTo(x - 31, y); ctx.lineTo(x - 17, y); ctx.moveTo(x + 17, y); ctx.lineTo(x + 31, y); ctx.stroke();
+  ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y - 78); ctx.lineTo(x, y - 72); ctx.stroke();
+  if (!tr) {
+    ctx.fillStyle = P('robe'); ctx.beginPath(); ctx.moveTo(x - 9, y - 70); ctx.lineTo(x + 9, y - 70); ctx.lineTo(x + 15, y - 20); ctx.lineTo(x - 15, y - 20); ctx.closePath(); ctx.fill();
+    fillR('stole', x - 6.5, y - 68, 3, 46, 1); fillR('stole', x + 3.5, y - 68, 3, 46, 1); fillR('apron', x - 5, y - 72, 10, 3.4, 1.5);
+    return;
+  }
+  const body = [[x - 7, y - 58, 8], [x + 7, y - 58, 8], [x, y - 48, 9], [x - 8, y - 38, 8], [x + 8, y - 38, 8], [x, y - 28, 8.5], [x - 15, y - 54, 5], [x + 15, y - 54, 5], [x - 17, y - 44, 4.5], [x + 17, y - 44, 4.5], [x - 6, y - 18, 4.5], [x + 6, y - 18, 4.5]];
+  ctx.fillStyle = P('woolSh'); circles(body.map((c) => [c[0], c[1], c[2] + 1.2])); ctx.fill();
+  ctx.fillStyle = P('wool'); circles(body); ctx.fill();
+  ctx.strokeStyle = P('nose'); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, y - 62); ctx.lineTo(x, y - 22); ctx.stroke();
+  ctx.lineWidth = 0.8; ctx.beginPath(); for (let yy = y - 60; yy < y - 24; yy += 3) { ctx.moveTo(x - 1.6, yy); ctx.lineTo(x + 1.6, yy); } ctx.stroke();
+  fillR('steth', x - 2, y - 56, 4, 6, 1);
+  ctx.fillStyle = P('woolSh'); circles([[x - 7, y - 70, 5.5], [x, y - 74, 6], [x + 7, y - 70, 5.5]]); ctx.fill();
+  fillE('face', x, y - 67, 7, 6);
+  fillC('pupil', x - 2.6, y - 68, 1.2); fillC('pupil', x + 2.6, y - 68, 1.2);
+  ctx.strokeStyle = P('pupil'); ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x - 3, y - 64); ctx.lineTo(x + 3, y - 64); ctx.stroke();
+  fillR('board', x + 11, y - 36, 17, 10, 1);
+  text('XL', x + 19.5, y - 31, 6.5, F_TRUTH, P('ink'), 15);
+}
+
+/* outside, in the ranch */
+function drawChapel() {
+  const { x0, x1, y1 } = CHAPEL, cx = CHAPEL.door, top = y1 - 80, tr = isTruthPass(), real = RR > 0.5;
+  fillR('chWallSh', cx - 17, top - 100, 34, 70, 2); fillR('chWall', cx - 15, top - 100, 30, 68, 2);
+  ctx.fillStyle = P('chRoofSh'); archPath(cx, top - 92, 16, 22); ctx.fill();
+  const ring = G.church && G.church.bellT > 0 ? Math.min(1, G.church.bellT) : 0;
+  ctx.save(); ctx.translate(cx, top - 84); if (ring && !RM) ctx.rotate(Math.sin(G.clock * 10) * 0.55 * ring);
+  fillC('tag', 0, 10, 5.5); fillR('tag', -6.5, 9, 13, 4, 1); ctx.restore();
+  if (ring) {
+    ctx.strokeStyle = tr ? 'rgba(34,33,31,' + (0.8 * ring).toFixed(2) + ')' : 'rgba(255,95,162,' + (0.9 * ring).toFixed(2) + ')'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+    const k = RM ? 0.5 : (G.clock * 1.6) % 1;
+    for (const sd of [-1, 1]) for (const r of [8 + k * 6, 15 + k * 6]) { ctx.beginPath(); ctx.arc(cx + sd * 18, top - 78, r, sd > 0 ? -0.7 : Math.PI - 0.7, sd > 0 ? 0.7 : Math.PI + 0.7); ctx.stroke(); }
+  }
+  ctx.fillStyle = P('chRoofSh'); tri(cx - 22, top - 98, cx, top - 150, cx + 22, top - 98); ctx.fill();
+  ctx.fillStyle = P('chRoof'); tri(cx - 18, top - 99, cx, top - 146, cx + 14, top - 99); ctx.fill();
+  ctx.strokeStyle = P('iron'); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(cx, top - 148); ctx.lineTo(cx, top - 160); ctx.stroke();
+  if (tr) { ctx.save(); ctx.translate(cx - 4, top - 164); ctx.scale(0.42, 0.42); wolfHead(0); wolfEars(0); ctx.restore(); }
+  else { ctx.fillStyle = P('wool'); circles([[cx - 5, top - 165, 4], [cx, top - 168, 4.5], [cx + 5, top - 165, 4], [cx, top - 162, 4]]); ctx.fill(); fillE('face', cx + 8, top - 165, 2.6, 2.2); fillR('legs', cx - 4, top - 162, 1.6, 4); fillR('legs', cx + 3, top - 162, 1.6, 4); }
+  ctx.fillStyle = P('chRoofSh'); tri(x0 - 14, top + 4, cx, top - 62, x1 + 14, top + 4); ctx.fill();
+  ctx.fillStyle = P('chRoof'); tri(x0 - 8, top + 1, cx, top - 56, x1 + 8, top + 1); ctx.fill();
+  ctx.fillStyle = P('chWall'); ctx.beginPath(); ctx.moveTo(x0, top); ctx.lineTo(cx, top - 48); ctx.lineTo(x1, top); ctx.lineTo(x1, y1); ctx.lineTo(x0, y1); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = P('trim'); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x0, top); ctx.lineTo(cx, top - 48); ctx.lineTo(x1, top); ctx.stroke();
+  fillR('chWallSh', x0, y1 - 9, x1 - x0, 9);
+  const cols = glassCols();
+  fillC('trim', cx, top - 18, 13);
+  for (let i = 0; i < 8; i++) { ctx.fillStyle = cols[i % cols.length]; ctx.beginPath(); ctx.moveTo(cx, top - 18); ctx.arc(cx, top - 18, 10.5, (i * TAU) / 8, ((i + 1) * TAU) / 8); ctx.closePath(); ctx.fill(); }
+  ctx.strokeStyle = P('ink'); ctx.lineWidth = 1; circ(cx, top - 18, 10.5); ctx.stroke();
+  drawArchWindow(x0 + 30, top + 14, 22, 38); drawArchWindow(x1 - 30, top + 14, 22, 38);
+  if (!tr && !real) for (const wx of [x0 + 30, x1 - 30]) { fillR('woodSh', wx - 16, top + 54, 32, 7, 2); ctx.fillStyle = '#FF8FC8'; circles([[wx - 9, top + 53, 3.4], [wx, top + 52, 3.6], [wx + 9, top + 53, 3.4]]); ctx.fill(); }
+  ctx.fillStyle = P('trim'); archPath(cx, y1 - 52, 46, 52); ctx.fill();
+  ctx.fillStyle = P('woodSh'); archPath(cx, y1 - 48, 38, 48); ctx.fill();
+  fillR('wood', cx - 17, y1 - 36, 16, 36, 1); fillR('wood', cx + 1, y1 - 36, 16, 36, 1);
+  fillC('tag', cx - 4, y1 - 18, 1.8); fillC('tag', cx + 4, y1 - 18, 1.8);
+  if (tr) { ctx.strokeStyle = P('nose'); ctx.lineWidth = 1.3; ctx.beginPath(); for (let i = 0; i < 3; i++) { ctx.moveTo(cx + 3 + i * 4, y1 - 32); ctx.lineTo(cx + 8 + i * 4, y1 - 20); } ctx.stroke(); }
+  else { ctx.fillStyle = '#FF5FA2'; ctx.beginPath(); const hy = y1 - 41; ctx.moveTo(cx, hy + 5); ctx.bezierCurveTo(cx - 7, hy, cx - 4, hy - 5, cx, hy - 1.5); ctx.bezierCurveTo(cx + 4, hy - 5, cx + 7, hy, cx, hy + 5); ctx.fill(); }
+  fillR('board', cx - 30, y1, 60, 5, 2);
+}
+function drawChapelSign() {
+  const { x, y } = CHAPEL_SIGN;
+  fillR('woodSh', x - 3, y - 26, 6, 26);
+  fillR('wood', x - 101, y - 74, 202, 50, 5); fillR('board', x - 97, y - 71, 194, 44, 4);
+  signText('CHAPEL OF THE GOOD SHEPHERD', 'CHAPEL OF THE HUNGRY SHEPHERD', x, y - 59, 12.5, 182);
+  signText('SUNDAY: BLESSED ARE THE MEEK', 'SUNDAY: BLESSED ARE THE TENDER', x, y - 39, 11, 182, 'sackInk');
+}
+
+addStatic(CHAPEL.y1, CHAPEL.x0 - 20, CHAPEL.y1 - 250, CHAPEL.x1 + 20, CHAPEL.y1 + 8, drawChapel);
+addStatic(CHAPEL_SIGN.y, CHAPEL_SIGN.x - 104, CHAPEL_SIGN.y - 78, CHAPEL_SIGN.x + 104, CHAPEL_SIGN.y + 2, drawChapelSign);
+addStatic(1722, 226, 1590, 1274, 1724, drawChurchBackWall);
+addStatic(ORGAN.y1, ORGAN.x0 - 4, ORGAN.y1 - 84, ORGAN.x1 + 4, ORGAN.y1 + 2, drawOrgan);
+for (const cx of [612, 888]) addStatic(1800, cx - 20, 1726, cx + 20, 1802, () => drawCandle(cx, 1800));
+addStatic(1834, NAVE.aisle - 38, 1770, NAVE.aisle + 38, 1836, drawPulpit);
+addStatic(1864, 996, 1680, 1016, 1866, drawVestryWallL);
+addStatic(1865, 996, 1812, 1254, 1866, drawVestryWallB);
+addStatic(VDESK.y1, VDESK.x0 - 6, VDESK.y1 - 70, VDESK.x1 + 6, VDESK.y1 + 2, drawVestryDesk);
+addStatic(RACK.y, RACK.x - 34, RACK.y - 90, RACK.x + 34, RACK.y + 2, drawRack);
+for (const p of PEWS) addStatic(p.y + 12, p.x0 - 6, p.y - 28, p.x1 + 6, p.y + 20, () => drawPew(p));
+for (const [x, y] of PILLARS) addStatic(y + 13, x - 19, y - 98, x + 19, y + 15, () => drawPillar(x, y));
+addStatic(2302, 226, 2240, 1274, 2304, drawChurchFrontWall);
+
+/* "Every head bowed": a caption pinned to the screen, with a countdown to "Amen" */
+function drawPrayerCaption() {
+  const C = G.church, p = G.player;
+  if (G.mode !== 'play' || G.modal || G.fade || C.walkout || C.mode === 'sermon' || G.phase !== 'fleecing' || regionOf(p.x, p.y) !== 'church') return;
+  const tr = G.view === 1, warn = C.mode === 'warn', key = touchMode ? 'Bow' : 'Shift';
+  const line = warn ? 'Let us pray...' : 'Every head bowed. Every eye closed.';
+  const sub = warn ? 'Get ready to hold ' + key + '.' : p.grazing ? 'Stay down until "Amen."' : 'Hold ' + key + ' to bow your head!';
+  const left = clamp(warn ? 1 - C.t / C.warn : 1 - C.t / 4.6, 0, 1);
+  const hudH = parseFloat(app.style.getPropertyValue('--hud-h')) || 0;
+  const font = tr ? F_TRUTH : F_BODY, wt = tr ? '' : '700', ink = tr ? '#22211F' : '#3E1F7A', seen = !warn && G.maxAlert > 0.05;
+  ctx.font = fontStr(18, font, wt); const w1 = ctx.measureText(line).width;
+  ctx.font = fontStr(13.5, font, wt); const w2 = ctx.measureText(sub).width;
+  const w = Math.min(view.w - 24, Math.max(w1, w2) + 44), h = 66, x = view.w / 2 - w / 2, y = view.w >= 1100 ? 20 : touchMode ? view.h - h - 250 : Math.max(hudH + 14, view.h - h - 96);
+  ctx.fillStyle = tr ? '#E8E4D8' : '#FFFFFF'; ctx.strokeStyle = seen ? '#C8372D' : ink; ctx.lineWidth = seen ? 3 : 2;
+  rrect(x, y, w, h, tr ? 3 : 16); ctx.fill(); ctx.stroke();
+  text(line, view.w / 2, y + 20, 18, font, ink, w - 24, 'center', wt);
+  text(sub, view.w / 2, y + 40, 13.5, font, seen ? '#C8372D' : tr ? '#55524D' : '#7A5AC8', w - 24, 'center', wt);
+  ctx.fillStyle = tr ? 'rgba(0,0,0,0.12)' : 'rgba(62,31,122,0.12)'; rrect(x + 18, y + h - 13, w - 36, 5, 2.5); ctx.fill();
+  ctx.fillStyle = warn ? (tr ? '#8A857C' : '#FFB84D') : tr ? '#C9A92E' : '#FF5FA2'; rrect(x + 18, y + h - 13, (w - 36) * left, 5, 2.5); ctx.fill();
+}
+
 /* ---------------- camera ---------------- */
 const cam = { x: 0, y: 0 };
 const view = { w: 800, h: 600, dpr: 1 };
@@ -1978,6 +2447,10 @@ function drawCones() {
   for (const w of G.wolves) {
     if (!w.active || w.ally) continue;
     if (w.x + w.range < VB.x0 || w.x - w.range > VB.x1 || w.y + w.range < VB.y0 || w.y - w.range > VB.y1) continue;
+    if (w.id === 'pastor' && G.church.mode !== 'sermon' && G.phase === 'fleecing') {
+      drawPrayGaze(w, G.church.mode === 'pray' ? 1 : 0.35);
+      if (G.church.mode === 'pray') continue;
+    }
     const sense = w.sense || 'cone';
     if (sense === 'beam') { drawBeam(w); continue; }
     if (sense === 'sniff') { drawSniff(w); continue; }
@@ -2079,6 +2552,8 @@ function drawParticles() {
     } else if (p.type === 'heart') {
       ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.size / 10, p.size / 10); ctx.fillStyle = 'rgba(255,95,162,' + a.toFixed(2) + ')';
       ctx.beginPath(); ctx.moveTo(0, 4); ctx.bezierCurveTo(-10, -4, -5, -11, 0, -5); ctx.bezierCurveTo(5, -11, 10, -4, 0, 4); ctx.fill(); ctx.restore();
+    } else if (p.type === 'wool') {
+      ctx.fillStyle = 'rgba(238,236,228,' + a.toFixed(2) + ')'; circles([[p.x, p.y, p.size], [p.x + p.size * 0.8, p.y - p.size * 0.4, p.size * 0.7], [p.x - p.size * 0.7, p.y - p.size * 0.3, p.size * 0.7]]); ctx.fill();
     } else if (p.type === 'dust') {
       ctx.fillStyle = 'rgba(200,180,150,' + (a * 0.6).toFixed(2) + ')'; circ(p.x, p.y, p.size * (1.6 - a * 0.6)); ctx.fill();
     } else if (p.type === 'hat') {
@@ -2120,12 +2595,12 @@ function drawFX() {
   drawParticles();
   if (G.bfly && !G.bfly.gone) drawButterfly(G.bfly);
   for (const s of G.sheep) if (s.bubble && inVB(s.x, s.y)) bubbleAt(s.x, s.y - 54 * (s.scale || 1), s.bubble.text);
-  for (const w of G.wolves) if (w.active && w.bubble && inVB(w.x, w.y)) bubbleAt(w.x, w.y - (w.type === 'dog' ? 48 : 92), w.bubble.text);
+  for (const w of G.wolves) if (w.active && w.bubble && inVB(w.x, w.y)) bubbleAt(w.x, w.y - (w.type === 'dog' ? 48 : w.type === 'pastor' ? 112 : 92), w.bubble.text);
   const p = G.player;
   if (p.bubble) bubbleAt(p.x, p.y - 56, p.bubble.text);
   if (G.phase === 'fleecing') {
-    for (const w of G.wolves) if (w.active && w.alert > 0.04) drawAlertMark(w.x, w.y - (w.type === 'dog' ? 54 : 100), w.alert);
-    if (G.hiddenFrom && isTruthPass() && !p.bubble) bubbleAt(p.x, p.y - 52, 'Hidden');
+    for (const w of G.wolves) if (w.active && w.alert > 0.04) drawAlertMark(w.x, w.y - (w.type === 'dog' ? 54 : w.type === 'pastor' ? 124 : 100), w.alert);
+    if (G.hiddenFrom && (isTruthPass() || G.prayHidden) && !p.bubble) bubbleAt(p.x, p.y - 52, G.prayHidden ? 'Head bowed' : 'Hidden');
   }
   for (const s of G.sheep) if (s.sulk > 0 && inVB(s.x, s.y) && !s.bubble) drawSulk(s.x + 24 * (s.facing || 1), s.y - 44 * (s.scale || 1));
   if (G.mode === 'play' && G.interact && !G.modal && !G.fade) {
@@ -2204,6 +2679,7 @@ function renderWorld(t) {
   drawPost(t);
 }
 function drawGateArrow() {
+  if (regionOf(G.player.x, G.player.y) !== 'ranch') return;
   const [gx, gy] = toScreen(GATEX, 990);
   const m = 48;
   if (gx > m && gx < view.w - m && gy > m + 70 && gy < view.h - m) return;
@@ -2218,7 +2694,7 @@ function drawGateArrow() {
 }
 function screenOverlays() {
   setScreenT();
-  if (G.mode === 'play' && G.view === 1 && !G.wipe && G.maxAlert > 0.2) {
+  if (G.mode === 'play' && (G.view === 1 || G.church.mode === 'pray') && !G.wipe && G.maxAlert > 0.2) {
     const a = (G.maxAlert - 0.2) * 0.7 * (RM ? 1 : 0.75 + 0.25 * Math.sin(G.clock * 10));
     const g = ctx.createRadialGradient(view.w / 2, view.h / 2, Math.min(view.w, view.h) * 0.32, view.w / 2, view.h / 2, Math.hypot(view.w, view.h) * 0.6);
     g.addColorStop(0, 'rgba(200,40,30,0)'); g.addColorStop(1, 'rgba(200,40,30,' + a.toFixed(3) + ')');
@@ -2231,6 +2707,7 @@ function screenOverlays() {
   if (G.fade) { const k = G.fade.t / G.fade.dur; ctx.fillStyle = 'rgba(14,12,20,' + clamp(1 - Math.abs(k * 2 - 1), 0, 1).toFixed(3) + ')'; ctx.fillRect(0, 0, view.w, view.h); }
   if (G.flash > 0) { ctx.fillStyle = 'rgba(' + G.flashColor + ',' + Math.min(1, G.flash).toFixed(3) + ')'; ctx.fillRect(0, 0, view.w, view.h); }
   if (G.mode === 'play' && G.phase === 'herd' && G.flags.herdReady) drawGateArrow();
+  drawPrayerCaption();
 }
 function renderTitle() {
   renderWorld(0);
@@ -2296,7 +2773,7 @@ function newGame(opts) {
     flags: { retry: !!opts.retry }, timers: [], particles: [], pops: [], cut: null, camTarget: null,
     maxAlert: 0, invuln: 0, woozy: 0, playerDark: 0, rh: null, st: 0, fenceT: 0, disguisesGone: false, shock: null,
     flash: 0, flashColor: '255,255,255', talkTarget: null, hint: '', pendingEnd: null, afterDialog: null, sparkT: 0, baaCd: 0,
-    seenBy: null, hiddenFrom: false, followCount: 0, endKind: null, interact: null, fade: null, noise: null,
+    seenBy: null, hiddenFrom: false, prayHidden: false, church: newChurch(), followCount: 0, endKind: null, interact: null, fade: null, noise: null,
   });
   for (const b of solids) b.on = true;
   G.player = {
@@ -2403,8 +2880,8 @@ function updateSheep(s, dt) {
   const p = G.player;
   let tx = null, ty = null, speed = 0;
   if (s.run) {
-    tx = s.run.x; ty = s.run.y; speed = 215;
-    if (dist(s.x, s.y, tx, ty) < 6) { s.hx = tx; s.hy = ty; s.run = null; s.follow = false; s.wander = 80; s.idle = rand(0.5, 2); s.tx = s.x; s.ty = s.y; tx = null; }
+    tx = s.run.x; ty = s.run.y; speed = s.run.speed || 215;
+    if (dist(s.x, s.y, tx, ty) < 6) { const then = s.run.then; s.hx = tx; s.hy = ty; s.run = null; s.follow = false; s.wander = 80; s.idle = rand(0.5, 2); s.tx = s.x; s.ty = s.y; tx = null; if (then) then(s); }
   } else if (s.follow && regionOf(s.x, s.y) === regionOf(p.x, p.y)) {
     const ang = s.fi * 2.39996 + 1.2, rad = 46 + 15 * Math.sqrt(s.fi + 1);
     tx = p.x + Math.cos(ang) * rad; ty = p.y + Math.sin(ang) * rad * 0.72;
@@ -2505,6 +2982,7 @@ function updateWolves(dt) {
       else turnToward(w, a, (w.type === 'tower' ? 1.2 : 3.2) * dt);
       w.walk = 0; if (w.type !== 'twohead' && w.type !== 'tower') setFacing(w); continue;
     }
+    if (w.id === 'pastor' && G.church.mode !== 'sermon') { turnToward(w, Math.PI / 2, 2.5 * dt); w.walk = 0; continue; }
     if (w.behavior === 'roam') updateRoam(w, dt, spd);
     else if (w.behavior === 'patrol') {
       if (w.pause > 0) { w.pause -= dt; w.walk = 0; turnToward(w, w.lookBase + Math.sin((1.4 - w.pause) * 2.2) * 0.9, 2.5 * dt); }
@@ -2580,20 +3058,21 @@ function herdWolf(w, dt) {
 /* ---------------- being seen ---------------- */
 function detect(dt) {
   const p = G.player, moving = p.walk > 0.15 && !p.grazing, glassesOut = p.specsOn && !p.grazing;
-  let maxA = 0; G.seenBy = null; G.hiddenFrom = false;
+  let maxA = 0; G.seenBy = null; G.hiddenFrom = false; G.prayHidden = false;
   for (const w of G.wolves) {
     if (!w.active) continue;
     w.sheepCd = Math.max(0, w.sheepCd - dt);
     if (w.ally) { w.alert = 0; w.sees = false; continue; }
     if (w.distracted > 0) { w.alert = Math.max(0, w.alert - dt); w.sees = false; continue; }
-    const sense = w.sense || 'cone';
+    const sense = w.id === 'pastor' && G.church.mode === 'pray' ? 'pray' : w.sense || 'cone';
     let d;
     if (sense === 'sniff') { const dd = dist(w.x, w.y, p.x, p.y); d = dd <= w.range ? dd : -1; }
+    else if (sense === 'pray') d = prayView(w, p);
     else d = inCone(w, p.x, p.y);
     w.sees = d >= 0;
-    const exposed = G.invuln <= 0 && (sense === 'beam' ? true : sense === 'sniff' ? moving : glassesOut);
+    const exposed = G.invuln <= 0 && (sense === 'beam' ? true : sense === 'sniff' ? moving : sense === 'pray' ? !p.grazing : glassesOut);
     if (w.sees && exposed) {
-      const base = sense === 'beam' ? 1.3 : sense === 'sniff' ? 1.35 : 0.55 + 1.2 * (1 - d / w.range);
+      const base = sense === 'pray' ? 1.2 : sense === 'beam' ? 1.3 : sense === 'sniff' ? 1.35 : 0.55 + 1.2 * (1 - d / w.range);
       const before = w.alert;
       w.alert = Math.min(1, w.alert + base * (1 + 0.15 * G.heat) * dt);
       if (before < 0.15 && w.alert >= 0.15) Snd.play(sense === 'sniff' ? 'sniff' : 'alertQ');
@@ -2608,6 +3087,10 @@ function detect(dt) {
         if (w.sheepCd <= 0) { w.sheepCd = 2.5; G.sheepish++; if (G.sheepish >= 10) unlock('sheepish'); }
       }
       if (w.sees && sense === 'sniff' && p.grazing) G.hiddenFrom = true;
+      if (w.sees && sense === 'pray' && p.grazing) {
+        G.hiddenFrom = true; G.prayHidden = true;
+        if (w.sheepCd <= 0) { w.sheepCd = 2.5; G.sheepish++; if (G.sheepish >= 10) unlock('sheepish'); }
+      }
     }
     maxA = Math.max(maxA, w.alert);
   }
@@ -2667,6 +3150,7 @@ function updateFleeceObjective() {
       'Hide from the searchlight behind hedges. Freeze when the chef gets close.');
     return;
   }
+  if (reg === 'church') { churchObjective(); return; }
   if (reg === 'field') {
     setObjective(G.proof.has('checks') ? 'You have the campaign checks.' : 'Find the campaign checks at Rom HQ.', G.view ? 'Two doors. Two signs. One field.' : 'The South Pasture is through the other door. Supposedly.');
     return;
@@ -2769,7 +3253,7 @@ function findInteract() {
     const d = dist(p.x, p.y, b.x, b.y);
     if (d < 62 && d < bd) { bd = d; best = { kind: 'dog', ref: b, x: b.x, y: b.y - 48, label: 'Talk to Sgt. Biscuit' }; }
   }
-  if (G.phase === 'meadow' || G.phase === 'fleecing') {
+  if (G.phase === 'meadow' || G.phase === 'fleecing' || (G.phase === 'herd' && reg !== 'ranch')) {
     for (const pt of PORTALS) {
       if (pt.region !== reg || (pt.truthOnly && !(p.specsOn && G.view === 1))) continue;
       const d = dist(p.x, p.y, pt.x, pt.y);
@@ -2806,6 +3290,8 @@ function onEnterRegion(reg, dest) {
   } else if (reg === 'field') {
     const north = dest.id === 'fieldN';
     toast(G.view ? 'Same Pasture' : north ? 'North Pasture' : 'South Pasture', G.view ? 'Which door did you use? Does it matter?' : north ? 'Home of the North Pasture sheep.' : 'Home of the South Pasture sheep.');
+  } else if (reg === 'church') {
+    enterChurch();
   } else {
     const g = G.sheep.find((q) => q.id === 'gerald');
     if (g && g.follow && g.state !== 'woke' && regionOf(g.x, g.y) === 'ranch') {
@@ -2917,6 +3403,7 @@ function wakeSheep(s, counts) {
   s.state = 'woke'; s.wakeFx = 1.4; s.grazing = false;
   Snd.play('wake');
   for (let i = 0; i < 14; i++) spawn({ type: 'star', x: s.x, y: s.y - 30, vx: rand(-120, 120), vy: rand(-160, -40), g: 260, life: 0.8, size: rand(3, 6) });
+  if (s.id === 'ewenice') later(0.5, eweniceLeaves);
   if (!counts) return;
   G.woke++; G.wokePersonal++;
   G.playerDark = Math.min(0.72, G.woke * 0.24);
@@ -2965,6 +3452,8 @@ function startHerd() {
   if (G.wipe) { G.view = G.wipe.to; G.wipe = null; }
   setPhase('herd');
   banner('Herd Mentality!', 'Awake sheep are waking their neighbors.', 3);
+  ringChapelBell();
+  if (regionOf(G.player.x, G.player.y) !== 'ranch') later(1.4, () => toast('Back to the ranch', 'The flock is gathering at the gate. Head for the exit.'));
   Snd.play('fanfare');
   for (const s of G.sheep) if (s.state === 'woke' && regionOf(s.x, s.y) === 'ranch') startFollowing(s);
   for (const w of G.wolves) { w.alert = 0; w.distracted = 0; }
@@ -3120,6 +3609,7 @@ function dogNode(w) {
 }
 function dogProofNode(w) {
   const ch = G.proofs.filter((p) => p.found).map((p) => ({ label: 'Show ' + p.short, run: () => {
+    if (p.id === 'fleece') { G.afterDialog = () => { w.sulk = 15; say(w, '*sniff* Smells like wolf.', 1.6); }; return { who: w, text: "*sniff sniff* A sheep suit that smells like wolf. That's a Sunday matter, sir. I don't do Sundays.", choices: [{ label: 'Oops. Wrong proof.' }] }; }
     if (p.id === 'guestbook') return flipNode(w, '312 in. Zero out. I walked them there. I WALKED THEM THERE. ...Permission to bite a shepherd, sir?');
     G.afterDialog = () => { w.sulk = 15; say(w, '*sniffs paper, unimpressed*', 1.6); };
     return { who: w, text: "That's a piece of paper, sir. I'm a dog.", choices: [{ label: 'Oops. Wrong proof.' }] };
@@ -3137,9 +3627,139 @@ function flipNode(w, line) {
   return { who: w, text: line, choices: [{ label: 'Permission granted' }] };
 }
 
+/* ---------------- Sunday service ---------------- */
+const SERMON = [
+  'The wolves are OUT THERE, beyond the fence!',
+  'Stay in the pasture. The pasture loves you.',
+  'Questions are how the wolf gets in.',
+  'Give, and it shall be given! To me. For safekeeping.',
+  "Blessed are the meek, for they don't ask questions!",
+  'Fat and happy is next to godly!',
+  "Don't look at the fence. Look at the plate.",
+];
+const PLATE_LINES = ['Plate coming round!', 'Dig deep, folks!', 'Every tuft helps!', "Don't look up. Just give."];
+// when Sister Ewenice walks out, the pews grumble but stay put: they are still asleep
+const MURMURS = ['Sister Ewenice? Leaving DURING the sermon?', 'Scandalous!', "She'll be back. Nobody leaves.", 'Shh! He is still preaching.'];
+// at the finale she rings the bell, and they finally come
+const BELL_LINES = ['The bell!', 'Sister Ewenice was RIGHT!', 'Wait for us!', 'His ZIPPER!', 'Is that a TAIL?', 'Where does the plate GO?'];
+let exitN = 0;
+function newChurch() { return { mode: 'sermon', t: 0, len: 7, warn: 2.8, talkT: 1, line: 0, ewenice: false, walkout: false, bellT: 0, tuftT: 0, prayers: 0 }; }
+function prayView(w, p) {
+  return regionOf(p.x, p.y) === 'church' && !segBlocked(w.x, w.y - 36, p.x, p.y - 8) ? dist(w.x, w.y, p.x, p.y) : -1;
+}
+function updateChurch(dt) {
+  const C = G.church, p = G.player;
+  const pastor = G.wolves.find((w) => w.id === 'pastor'), usher = G.wolves.find((w) => w.id === 'usher');
+  const praying = C.mode === 'pray';
+  if (C.bellT > 0) C.bellT = Math.max(0, C.bellT - dt);
+  for (const s of G.sheep) {
+    if (s.home !== 'church' || s.run || s.follow || s.panic > 0) continue;
+    if (s.walk < 0.15) s.facing = s.id === 'ewenice' ? -1 : s.x < NAVE.aisle ? 1 : -1;
+    if (s.state === 'asleep') { s.grazing = praying; s.grazeIdle = praying; }
+  }
+  for (const s of G.sheep) if (s.leaving && s.y > 2200 && Math.abs(s.x - NAVE.aisle) < 70) exitChurch(s, true);
+  const inside = regionOf(p.x, p.y) === 'church';
+  const live = inside && !C.walkout && (G.phase === 'meadow' || G.phase === 'glasses' || G.phase === 'fleecing');
+  if (!live) { if (C.mode !== 'sermon') { C.mode = 'sermon'; C.t = 0; } return; }
+  const ew = G.sheep.find((s) => s.id === 'ewenice');
+  if (ew && ew.state === 'asleep' && !praying && ew.hopT <= 0 && Math.random() < dt * 0.7) ew.hopT = 0.55;
+  C.t += dt;
+  if (C.mode === 'sermon') {
+    C.talkT -= dt;
+    if (C.talkT <= 0 && pastor) { C.talkT = rand(3.6, 4.8); say(pastor, SERMON[C.line++ % SERMON.length], 3); }
+    if (C.t >= C.len) {
+      C.mode = 'warn'; C.t = 0; C.warn = C.prayers ? 2 : 2.8;
+      if (pastor) say(pastor, C.ewenice ? 'Let us pray... without music, apparently.' : 'Let us pray...', C.warn);
+      if (!C.ewenice) Snd.play('organ');
+      if (!C.prayers && G.phase === 'fleecing') banner('Every head bowed!', (touchMode ? 'Hold Bow' : 'Hold Shift') + ' to bow your head until the pastor says "Amen."', 3.2);
+    }
+  } else if (C.mode === 'warn') {
+    if (C.t >= C.warn) { C.mode = 'pray'; C.t = 0; C.prayers++; if (pastor) say(pastor, 'Every head bowed. Every eye closed.', 3.4); }
+  } else {
+    C.tuftT -= dt;
+    if (C.tuftT <= 0 && usher) {
+      C.tuftT = 0.3;
+      const s = pick(G.sheep.filter((q) => q.home === 'church' && q.state === 'asleep' && q.grazing && dist(q.x, q.y, usher.x, usher.y) < 520));
+      if (s) spawn({ type: 'wool', mode: 'truth', x: s.x + rand(-8, 8), y: s.y - 30, vx: (usher.x + 6 - s.x) / 1.1, vy: (usher.y - 36 - s.y + 30) / 1.1, life: 1.1, size: rand(2.6, 4.2) });
+    }
+    if (usher && !usher.bubble && C.t > 0.8 && Math.random() < dt * 0.5) say(usher, pick(PLATE_LINES), 1.8);
+    if (C.t >= 4.6) { C.mode = 'sermon'; C.t = 0; C.len = rand(9, 12); C.talkT = 1.6; if (pastor) say(pastor, 'Amen!', 1.4); Snd.play('amen'); }
+  }
+}
+function enterChurch() {
+  const C = G.church;
+  C.mode = 'sermon'; C.t = 0; C.talkT = 0.8; C.len = G.flags.visitedChurch ? rand(8, 11) : 7;
+  if (!G.flags.visitedChurch) {
+    G.flags.visitedChurch = true;
+    banner(G.view ? 'Chapel of the Hungry Shepherd' : 'Chapel of the Good Shepherd', G.view ? 'The pastor is wearing a sheep suit. Bow your head when he tells you to.' : 'Sunday service is on. Bow your head when the pastor says to.', 3.2);
+  }
+}
+function churchObjective() {
+  const C = G.church, bow = touchMode ? 'Hold Bow' : 'Hold Shift';
+  if (C.walkout) setObjective('The pews are empty.', 'Head back out to the ranch.');
+  else if (C.ewenice) setObjective('Sister Ewenice is waiting outside.', "The rest of the pews aren't ready yet. She'll ring the bell when your flock is.");
+  else if (!G.proof.has('fleece')) setObjective("Search Pastor Fleecewell's study, next to the pulpit.", bow + ' to bow your head when he says "Every head bowed."');
+  else setObjective('Show Sister Ewenice what you found.', 'She plays the organ. ' + bow + ' to bow during prayer.');
+}
+
+/* Sister Ewenice wakes up and walks out alone. The rest of the pews stay asleep. */
+function eweniceLeaves() {
+  const C = G.church;
+  if (C.ewenice) return;
+  C.ewenice = true;
+  const ew = G.sheep.find((s) => s.id === 'ewenice'), pastor = G.wolves.find((w) => w.id === 'pastor');
+  if (ew) { ew.hopT = 1; say(ew, "When your flock gathers, I'll ring the chapel bell. Wait and see.", 3.2); later(2.4, () => leaveChurch(ew)); }
+  later(1.8, () => { if (pastor) say(pastor, 'Sister Ewenice! The service is not over!', 2.4); });
+  if (G.phase === 'fleecing') {
+    const pews = G.sheep.filter((s) => s.home === 'church' && s !== ew);
+    pews.slice(0, MURMURS.length).forEach((s, i) => later(3 + i * 0.8, () => { if (s.state === 'asleep' && !C.walkout) say(s, MURMURS[i], 2.2); }));
+    later(7, () => { if (pastor && !C.walkout) say(pastor, '...Fine. Who needs an organ?', 2.4); });
+    later(3.4, () => { if (!C.walkout) toast('Sister Ewenice walked out', 'Just her. The rest of the pews stayed put, for now.'); updateFleeceObjective(); });
+  }
+}
+/* the finale: if Sister Ewenice is awake, she rings the bell and the congregation joins the herd (they don't count) */
+function ringChapelBell() {
+  const C = G.church, ew = G.sheep.find((s) => s.id === 'ewenice');
+  if (C.walkout || !ew || ew.state !== 'woke') return;
+  const pews = G.sheep.filter((s) => s.home === 'church' && s !== ew && s.state === 'asleep');
+  if (!pews.length) return;
+  C.walkout = true; C.bellT = 5;
+  Snd.play('bell'); later(0.9, () => Snd.play('bell')); later(1.8, () => Snd.play('bell'));
+  const inside = regionOf(G.player.x, G.player.y) === 'church', pastor = G.wolves.find((w) => w.id === 'pastor');
+  if (inside && pastor) later(1.4, () => say(pastor, 'Where is everyone going? The PLATE!', 2.4));
+  pews.forEach((s, i) => later(1.1 + i * 0.4, () => {
+    wakeSheep(s, false); s.hopT = 1; say(s, BELL_LINES[i % BELL_LINES.length], 1.8);
+    if (regionOf(G.player.x, G.player.y) === 'church') leaveChurch(s); else exitChurch(s, false, true);
+  }));
+  later(1.6, () => toast('The chapel bell is ringing', "Sister Ewenice's congregation is coming out to join the flock."));
+  later(1.4 + pews.length * 0.4, () => unlock('flock'));
+}
+function leaveChurch(s) {
+  if (s.home !== 'church' || s.leaving) return;
+  const lane = s.id === 'ewenice' ? 1866 : s.y;
+  s.follow = false; s.grazing = false; s.panic = 0; s.leaving = true;
+  s.run = { x: s.x, y: lane, speed: 118, then: () => {
+    s.run = { x: NAVE.aisle + rand(-14, 14), y: lane, speed: 118, then: () => {
+      s.run = { x: NAVE.aisle, y: 2262, speed: 118, then: () => exitChurch(s, true) };
+    } };
+  } };
+}
+// out through the chapel doors into the ranch; atDoor pops them out of the doorway for anyone watching outside
+function exitChurch(s, puff, atDoor) {
+  if (puff) for (let i = 0; i < 6; i++) spawn({ type: 'dust', x: NAVE.aisle + rand(-20, 20), y: 2262 + rand(-6, 6), vx: rand(-30, 30), vy: rand(-30, -5), life: 0.6, size: rand(4, 7) });
+  const k = exitN++ % 8;
+  if (s.id === 'ewenice') { s.x = 1088; s.y = 982; }
+  else if (atDoor) { s.x = CHAPEL.door + rand(-12, 12); s.y = 956 + rand(-3, 3); }
+  else { s.x = 988 + (k % 4) * 34 + rand(-5, 5); s.y = 980 + Math.floor(k / 4) * 32 + rand(-4, 4); }
+  for (let i = 0; i < 5; i++) spawn({ type: 'dust', x: CHAPEL.door + rand(-18, 18), y: 950 + rand(-4, 4), vx: rand(-30, 30), vy: rand(-30, -5), life: 0.6, size: rand(4, 7) });
+  s.run = null; s.leaving = false; s.home = 'ranch'; s.hx = s.x; s.hy = s.y; s.tx = s.x; s.ty = s.y; s.idle = rand(0.4, 1.4); s.grazing = false;
+  s.wander = s.id === 'ewenice' ? 22 : 60;
+  if (G.phase === 'herd' || G.phase === 'bigbaa') startFollowing(s);
+}
+
 /* ---------------- DOM ---------------- */
 const ui = {};
-['hud', 'hud-top', 'obj-text', 'obj-sub', 'pip-cred', 'pip-woke', 'pip-proof', 'btn-sound', 'btn-pause', 'keys', 'touch', 'joy-zone', 'joy', 'joy-knob',
+['hud', 'hud-top', 'objective', 'obj-toggle', 'obj-new', 'obj-act-text', 'obj-text', 'obj-sub', 'pip-cred', 'pip-woke', 'pip-proof', 'btn-sound', 'btn-pause', 'keys', 'touch', 'joy-zone', 'joy', 'joy-knob',
   't-talk', 't-specs', 't-baa', 't-graze', 'banner', 'banner-title', 'banner-sub', 'toasts', 'rhythm', 'rhythm-fill', 'rhythm-hint',
   'dialog', 'dlg-portrait', 'dlg-name', 'dlg-text', 'dlg-sr', 'dlg-choices', 'doc', 'doc-title', 'doc-body', 'doc-ok',
   'scr-title', 'scr-how', 'scr-pause', 'scr-end', 'btn-play', 'btn-how', 'btn-how-play', 'btn-how-back', 'btn-resume', 'btn-restart',
@@ -3170,7 +3790,19 @@ function syncHUD(force) {
   if (prevCred > G.cred) { ui.pipCred.classList.remove('hit'); void ui.pipCred.offsetWidth; ui.pipCred.classList.add('hit'); }
 }
 function measureHud() { if (!ui.hud.hidden) app.style.setProperty('--hud-h', ui.hudTop.offsetHeight + 'px'); }
+let objHidden = !!store.get().objHidden;
+function applyObjHidden() {
+  ui.objective.classList.toggle('collapsed', objHidden);
+  ui.objToggle.setAttribute('aria-expanded', String(!objHidden));
+  ui.objToggle.setAttribute('aria-label', (objHidden ? 'Show' : 'Hide') + ' objective');
+  ui.objToggle.title = (objHidden ? 'Show' : 'Hide') + ' objective' + (touchMode ? '' : ' (O)');
+  ui.objActText.textContent = objHidden ? 'Show' : 'Hide';
+  if (!objHidden) ui.objNew.hidden = true;
+  measureHud();
+}
+function toggleObjective() { objHidden = !objHidden; store.patch({ objHidden }); applyObjHidden(); Snd.play('click'); }
 function setObjective(main, sub) {
+  if (objHidden && main !== ui.objText.textContent) ui.objNew.hidden = false;
   ui.objText.textContent = main; ui.objSub.textContent = sub || ''; ui.objSub.hidden = !sub;
   requestAnimationFrame(measureHud);
 }
@@ -3193,8 +3825,8 @@ function banner(title, sub, dur) {
 function syncSoundBtn() { ui.btnSound.innerHTML = Snd.muted ? ICON.mute : ICON.sound; ui.btnSound.setAttribute('aria-label', Snd.muted ? 'Turn sound on' : 'Mute sound'); }
 function fillControls(el) {
   const rows = touchMode
-    ? [['Move', 'Drag on the left side'], ['Glasses on or off', 'Tap Glasses'], ['Graze, head down', 'Hold Graze'], ['Talk', 'Tap Talk next to a sheep'], ['Baa', 'Tap Baa']]
-    : [['Move', 'WASD or arrow keys'], ['Glasses on or off', 'Space'], ['Graze, head down', 'Hold Shift'], ['Talk', 'E next to a sheep'], ['Baa', 'B'], ['Pause', 'Esc'], ['Sound', 'M']];
+    ? [['Move', 'Drag on the left side'], ['Glasses on or off', 'Tap Glasses'], ['Graze or bow, head down', 'Hold Graze'], ['Talk', 'Tap Talk next to a sheep'], ['Baa', 'Tap Baa'], ['Show or hide objective', 'Tap Objective']]
+    : [['Move', 'WASD or arrow keys'], ['Glasses on or off', 'Space'], ['Graze or bow, head down', 'Hold Shift'], ['Talk', 'E next to a sheep'], ['Baa', 'B'], ['Show or hide objective', 'O'], ['Pause', 'Esc'], ['Sound', 'M']];
   el.innerHTML = '';
   for (const [a, b] of rows) { const li = document.createElement('li'); const s = document.createElement('span'); s.textContent = a; const k = document.createElement('b'); k.textContent = b; li.append(s, k); el.appendChild(li); }
 }
@@ -3209,7 +3841,15 @@ function updateTouchButtons() {
   setDis(ui.tSpecs, !p.hasSpecs || G.phase === 'reveal' || G.phase === 'bigbaa' || G.phase === 'stampede' || G.phase === 'meadow');
   ui.tSpecs.classList.toggle('on', !!p.specsOn);
   setDis(ui.tGraze, !(G.phase === 'meadow' || G.phase === 'glasses' || G.phase === 'fleecing'));
+  const gl = regionOf(p.x, p.y) === 'church' ? 'Bow' : 'Graze';
+  if (ui.tGraze.textContent !== gl) ui.tGraze.textContent = gl;
   ui.tBaa.classList.toggle('pulse', G.phase === 'bigbaa');
+}
+function syncKeyHints() {
+  const k = document.getElementById('k-graze');
+  if (!k || !G.player) return;
+  const lbl = regionOf(G.player.x, G.player.y) === 'church' ? 'Bow' : 'Graze';
+  if (k.lastChild && k.lastChild.textContent !== lbl) k.lastChild.textContent = lbl;
 }
 
 /* ---------------- dialog ---------------- */
@@ -3326,6 +3966,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (k === 'm') { Snd.toggleMute(); syncSoundBtn(); return; }
+  if (k === 'o' && G.mode === 'play' && !G.modal) { if (!e.repeat) toggleObjective(); return; }
   if (G.mode === 'title' && ui.scrHow.hidden && k === 'enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { Snd.init(); startPlay(); return; }
   if (!e.repeat && !G.modal) pressed.add(k);
   keys.add(k);
@@ -3380,6 +4021,8 @@ app.addEventListener('pointermove', (e) => {
 cv.addEventListener('pointerdown', () => { if (G.mode === 'play' && !G.modal && G.phase === 'bigbaa') pressed.add('b'); });
 ui.btnSound.addEventListener('click', () => { Snd.init(); Snd.toggleMute(); syncSoundBtn(); app.focus({ preventScroll: true }); });
 ui.btnPause.addEventListener('click', () => { setPause(true); });
+ui.objToggle.addEventListener('click', () => { toggleObjective(); app.focus({ preventScroll: true }); });
+applyObjHidden();
 
 /* ---------------- screens ---------------- */
 function setPause(on) {
@@ -3398,7 +4041,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && G.m
 const fmtTime = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 function refreshTitleFoot() {
   const s = store.get(), n = (s.ach || []).length;
-  let t = 'A playable demo with three pastures. About 10 minutes, sound on.';
+  let t = 'A playable demo with three pastures and a chapel. About 10 minutes, sound on.';
   if (s.best) t += ' Your best: ' + fmtTime(s.best) + '.';
   if (n) t += ' Achievements: ' + n + ' of ' + Object.keys(ACH).length + '.';
   ui.titleFoot.textContent = t;
@@ -3548,6 +4191,7 @@ function updatePlay(dt) {
   updatePlayer(dt);
   for (const s of G.sheep) updateSheep(s, dt);
   separate();
+  updateChurch(dt);
   updateWolves(dt);
   if (G.phase === 'fleecing') detect(dt); else { G.maxAlert = 0; G.seenBy = null; G.hiddenFrom = false; }
   if (G.modal) return;
@@ -3574,7 +4218,7 @@ function updatePlay(dt) {
   updateParticles(dt);
   updateCamera(dt);
   G.interact = canTalk() && !G.fade ? findInteract() : null;
-  updateTouchButtons();
+  updateTouchButtons(); syncKeyHints();
 }
 function doBaa() {
   if (G.phase === 'bigbaa') { rhythmPress(); return; }
@@ -3656,6 +4300,8 @@ function restoreSnapshot(s) {
       sh.state = 'woke';
       if (sh.kind === 'lamb') startFollowing(sh);
       if (sh.id === 'gerald') { sh.home = 'ranch'; sh.x = sh.hx = sh.tx = 430; sh.y = sh.hy = sh.ty = 330; PEN_GATE.on = false; }
+      if (sh.id === 'ewenice') G.church.ewenice = true; else if (sh.home === 'church') G.church.walkout = true;
+      if (sh.home === 'church') exitChurch(sh, false);
     }
     G.woke = s.wokeCount | 0; G.wokePersonal = s.wokePersonal | 0; G.playerDark = Math.min(0.72, G.woke * 0.24); G.heat = s.heat | 0;
     if (G.heat >= 2) { const b = G.wolves.find((w) => w.id === 'biscuit'); if (b) b.active = true; }
@@ -3663,7 +4309,7 @@ function restoreSnapshot(s) {
     setPhase(phase);
     if (s.specsOn && p.hasSpecs && phase === 'fleecing') { p.specsOn = true; G.view = 1; setUIMode('truth'); Snd.setMode('truth'); }
     syncHUD(true); updateCamera(0, true);
-    if (phase === 'fleecing' && G.woke >= 3) startHerd();
+    if (phase === 'fleecing' && G.woke >= WOKE_GOAL) startHerd();
     return true;
   } catch (e) { return false; }
 }
@@ -3705,6 +4351,9 @@ if (DEBUG) {
     sheep(id) { const s = G.sheep.find((q) => q.id === id); return s && { x: Math.round(s.x), y: Math.round(s.y), state: s.state, follow: s.follow, sulk: s.sulk }; },
     wear(on) { const p = G.player; p.hasSpecs = true; p.specsOn = !!on; G.view = on ? 1 : 0; G.wipe = null; setUIMode(on ? 'truth' : 'candy'); Snd.setMode(on ? 'truth' : 'candy'); },
     talkDog() { talkToDog(G.wolves.find((w) => w.id === 'biscuit')); },
+    setZoom(z) { zoom = z; updateCamera(0, true); },
+    church() { const C = G.church; return { mode: C.mode, t: +C.t.toFixed(2), len: C.len, ewenice: C.ewenice, walkout: C.walkout, bellT: +C.bellT.toFixed(2), prayers: C.prayers }; },
+    setChurch(mode, t) { const C = G.church; C.mode = mode; C.t = t || 0; if (mode === 'warn') C.warn = C.warn || 2; },
     face(id, x, y) { const w = G.wolves.find((q) => q.id === id); if (w) { w.dir = Math.atan2(y - w.y, x - w.x); } },
   };
 }

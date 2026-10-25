@@ -1,0 +1,10 @@
+# build outputs (index.html is committed for GitHub Pages)
+wake-up-sheeple.html
+test/index.html
+
+# test screenshots and audio renders
+shots/
+
+__pycache__/
+*.pyc
+.DS_Store

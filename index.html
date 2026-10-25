@@ -166,7 +166,8 @@ button{font:inherit;color:inherit}
 
 /* screens */
 .screen{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.screen.dim{background:var(--scrim)}
+.screen.dim{background:var(--scrim);align-items:flex-start;padding-top:max(20px,env(safe-area-inset-top,0px));padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
+.screen.dim>.card{margin-block:auto;flex:none}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;font:var(--ui-w) 17px/1 var(--ui-font);background:var(--ui-hi);color:var(--ui-fg);border:var(--ui-bw) solid var(--ui-line);border-radius:max(3px,calc(var(--ui-r) - 4px));box-shadow:var(--ui-shadow);cursor:pointer;transition:transform .12s,box-shadow .12s}
 .btn:hover{transform:translate(-1px,-1px)}
 .btn:active{transform:translate(2px,2px);box-shadow:none}

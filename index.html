@@ -706,7 +706,7 @@ const Snd = (() => {
     oink() { const t = now(); for (let i = 0; i < 2; i++) { const o = osc('sawtooth', 230 - i * 20, t + i * 0.16, 0.14, 0.08, 0.008); o.frequency.exponentialRampToValueAtTime(150, t + i * 0.16 + 0.14); noise(t + i * 0.16, 0.12, 0.05, 650, 'bandpass', 3); } },
     snap() { const t = now(); noise(t, 0.07, 0.22, 3200, 'highpass', 1); osc('square', 1900, t, 0.04, 0.05); noise(t + 0.05, 0.12, 0.08, 900, 'bandpass', 2); },
     lickDrop() { arp([84, 88, 91, 96], 0.05, 'triangle', 0.09, 0.22); },
-    kick() { const t = now(); const o = osc('sine', 190, t, 0.18, 0.3, 0.003); o.frequency.exponentialRampToValueAtTime(60, t + 0.18); noise(t + 0.02, 0.3, 0.12, 2400, 'bandpass', 0.8, fx, 700); },
+    lickKick() { const t = now(); const o = osc('sine', 190, t, 0.18, 0.3, 0.003); o.frequency.exponentialRampToValueAtTime(60, t + 0.18); noise(t + 0.02, 0.3, 0.12, 2400, 'bandpass', 0.8, fx, 700); },
     crunch() { const t = now(); for (let i = 0; i < 3; i++) noise(t + i * 0.09, 0.07, 0.12, 2600 - i * 400, 'bandpass', 1.4); [79, 76, 72, 67].forEach((m, i) => osc('sine', mtof(m), t + 0.32 + i * 0.13, 0.4, 0.07, 0.01)); },
     sniff() { const t = now(); noise(t, 0.07, 0.08, 4000, 'highpass', 0.7); noise(t + 0.12, 0.07, 0.08, 4200, 'highpass', 0.7); },
   };
@@ -4854,7 +4854,7 @@ function kickLick() {
   G.lick = null;
   if (s) { s.lure = null; s.idle = rand(1.5, 2.5); s.tx = s.x; s.ty = s.y; s.stuck = 0; }
   G.licksKicked++;
-  Snd.play('kick'); addShake(4); p.hopT = 1; p.facing = L.x >= p.x ? 1 : -1;
+  Snd.play('lickKick'); addShake(4); p.hopT = 1; p.facing = L.x >= p.x ? 1 : -1;
   for (let i = 0; i < 16; i++) spawn({ type: 'crumb', c: i % 2, x: L.x, y: L.y - 10, vx: rand(-170, 170), vy: rand(-240, -80), g: 520, life: rand(0.6, 1), size: rand(2, 4) });
   pop(L.x, L.y - 40, 'Kicked!', true);
   if (s) later(0.4, () => { if (!s.bubble) say(s, pick(KICK_SAY), 2.4); });

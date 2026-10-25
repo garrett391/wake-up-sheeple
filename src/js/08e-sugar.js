@@ -143,7 +143,7 @@ function kickLick() {
   G.lick = null;
   if (s) { s.lure = null; s.idle = rand(1.5, 2.5); s.tx = s.x; s.ty = s.y; s.stuck = 0; }
   G.licksKicked++;
-  Snd.play('kick'); addShake(4); p.hopT = 1; p.facing = L.x >= p.x ? 1 : -1;
+  Snd.play('lickKick'); addShake(4); p.hopT = 1; p.facing = L.x >= p.x ? 1 : -1;
   for (let i = 0; i < 16; i++) spawn({ type: 'crumb', c: i % 2, x: L.x, y: L.y - 10, vx: rand(-170, 170), vy: rand(-240, -80), g: 520, life: rand(0.6, 1), size: rand(2, 4) });
   pop(L.x, L.y - 40, 'Kicked!', true);
   if (s) later(0.4, () => { if (!s.bubble) say(s, pick(KICK_SAY), 2.4); });

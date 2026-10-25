@@ -7,12 +7,18 @@ Concatenates src/js/*.js (in filename order) into one IIFE, inlines it into src/
   test/index.html         a local copy the Playwright tests load (git-ignored)
 """
 import pathlib
+import re
 
 root = pathlib.Path(__file__).resolve().parent
 page = (root / "src/page.html").read_text()
 parts = sorted((root / "src/js").glob("*.js"))
 js = "(() => {\n'use strict';\n" + "\n".join(p.read_text() for p in parts) + "\n})();"
 assert "</script" not in js, "script text must not close the tag"
+# a repeated name in the sound table silently replaces the earlier sound
+sfx_at = js.index("const SFX = {")
+sfx_names = re.findall(r"^ {4}(\w+)\(", js[sfx_at:js.index("return {", sfx_at)], re.M)
+dup = sorted({n for n in sfx_names if sfx_names.count(n) > 1})
+assert not dup, f"sound names used twice in SFX: {dup}"
 out = page.replace("/*GAME_JS*/", js)
 assert '<div id="app"' in out, "page.html must contain the #app element"
 

@@ -132,6 +132,9 @@ function drawParticles() {
       ctx.beginPath(); ctx.moveTo(0, 4); ctx.bezierCurveTo(-10, -4, -5, -11, 0, -5); ctx.bezierCurveTo(5, -11, 10, -4, 0, 4); ctx.fill(); ctx.restore();
     } else if (p.type === 'wool') {
       ctx.fillStyle = 'rgba(238,236,228,' + a.toFixed(2) + ')'; circles([[p.x, p.y, p.size], [p.x + p.size * 0.8, p.y - p.size * 0.4, p.size * 0.7], [p.x - p.size * 0.7, p.y - p.size * 0.3, p.size * 0.7]]); ctx.fill();
+    } else if (p.type === 'crumb') {
+      ctx.fillStyle = tr ? 'rgba(190,183,168,' + a.toFixed(2) + ')' : p.c ? 'rgba(255,140,198,' + a.toFixed(2) + ')' : 'rgba(255,255,255,' + a.toFixed(2) + ')';
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     } else if (p.type === 'dust') {
       ctx.fillStyle = 'rgba(200,180,150,' + (a * 0.6).toFixed(2) + ')'; circ(p.x, p.y, p.size * (1.6 - a * 0.6)); ctx.fill();
     } else if (p.type === 'hat') {
@@ -246,6 +249,7 @@ function renderWorld(t) {
   drawFeetRing();
   DL.length = 0;
   for (const d of STATIC) if ((!d.ch || d.ch === G.ch) && d.x1 >= VB.x0 && d.x0 <= VB.x1 && d.y1 >= VB.y0 && d.y0 <= VB.y1) DL.push(d);
+  if (G.lick && inVB(G.lick.x, G.lick.y)) DL.push({ y: G.lick.y, draw: drawLick });
   for (const s of G.sheep) if (inVB(s.x, s.y)) DL.push({ y: s.y, s });
   for (const w of G.wolves) if (w.active && inVB(w.x, w.y)) DL.push({ y: w.y, w });
   DL.push({ y: G.player.y, pl: true });
@@ -256,20 +260,22 @@ function renderWorld(t) {
   setScreenT();
   drawPost(t);
 }
-function drawGateArrow() {
+// an arrow at the screen edge pointing at a spot in the ranch that is off screen
+function drawEdgeArrow(wx, wy, label, fill) {
   if (regionOf(G.player.x, G.player.y) !== 'ranch') return;
-  const [gx, gy] = toScreen(GATEX, 990);
+  const [gx, gy] = toScreen(wx, wy);
   const m = 48;
   if (gx > m && gx < view.w - m && gy > m + 70 && gy < view.h - m) return;
   const cx = view.w / 2, cy = view.h / 2, dx = gx - cx, dy = gy - cy;
   const s = Math.min((view.w / 2 - m) / Math.max(1e-6, Math.abs(dx)), (view.h / 2 - m) / Math.max(1e-6, Math.abs(dy)));
   const ax = cx + dx * s, ay = cy + dy * s, ang = Math.atan2(dy, dx);
   ctx.save(); ctx.translate(ax, ay); ctx.rotate(ang);
-  ctx.fillStyle = '#FFE14D'; ctx.strokeStyle = '#22211F'; ctx.lineWidth = 2.5;
+  ctx.fillStyle = fill; ctx.strokeStyle = '#22211F'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-10, -13); ctx.lineTo(-4, 0); ctx.lineTo(-10, 13); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.restore();
-  textOutlined('Gate', ax - Math.cos(ang) * 30, ay - Math.sin(ang) * 30, 15, G.view ? F_TRUTH : F_BODY, '#FFFFFF', '#22211F', G.view ? '' : '700');
+  textOutlined(label, ax - Math.cos(ang) * 30, ay - Math.sin(ang) * 30, 15, G.view ? F_TRUTH : F_BODY, '#FFFFFF', '#22211F', G.view ? '' : '700');
 }
+function drawGateArrow() { drawEdgeArrow(GATEX, 990, 'Gate', '#FFE14D'); }
 function screenOverlays() {
   setScreenT();
   if (G.mode === 'play' && (G.view === 1 || G.church.mode === 'pray') && !G.wipe && G.maxAlert > 0.2) {
@@ -285,6 +291,7 @@ function screenOverlays() {
   if (G.fade) { const k = G.fade.t / G.fade.dur; ctx.fillStyle = 'rgba(14,12,20,' + clamp(1 - Math.abs(k * 2 - 1), 0, 1).toFixed(3) + ')'; ctx.fillRect(0, 0, view.w, view.h); }
   if (G.flash > 0) { ctx.fillStyle = 'rgba(' + G.flashColor + ',' + Math.min(1, G.flash).toFixed(3) + ')'; ctx.fillRect(0, 0, view.w, view.h); }
   if (G.mode === 'play' && G.phase === 'herd' && G.flags.herdReady) drawGateArrow();
+  if (G.mode === 'play' && G.phase === 'fleecing' && G.lick) drawEdgeArrow(G.lick.x, G.lick.y - 12, 'Sugar lick', '#FF8CC6');
   drawPrayerCaption();
 }
 function renderTitle() {

@@ -79,7 +79,7 @@ function updateTouchButtons() {
   if (!p) return;
   const setDis = (b, d) => { if (b.disabled !== d) b.disabled = d; };
   setDis(ui.tTalk, !G.interact);
-  const tl = G.interact && G.interact.kind === 'portal' ? 'Go' : 'Talk';
+  const ik = G.interact && G.interact.kind, tl = ik === 'portal' ? 'Go' : ik === 'lick' ? 'Kick' : 'Talk';
   if (ui.tTalk.textContent !== tl) ui.tTalk.textContent = tl;
   setDis(ui.tSpecs, !p.hasSpecs || G.phase === 'reveal' || G.phase === 'bigbaa' || G.phase === 'stampede' || G.phase === 'meadow');
   ui.tSpecs.classList.toggle('on', !!p.specsOn);
@@ -324,6 +324,7 @@ const ENDINGS = {
   retired: ['Bad ending', 'Retired', "The Bureau's paperwork was flawless. The flock got a lovely card: 'Retired! Voluntarily!' Nobody listens to a sheep who retired. The pool at Sunny Acres is very warm."],
 };
 function endGame(kind) {
+  if (G.lick) clearLick();
   G.mode = 'ending'; G.endKind = kind; G.modal = null;
   for (const el of [ui.hud, ui.touch, ui.rhythm, ui.banner, ui.dialog, ui.doc]) el.hidden = true;
   app.classList.remove('dlg-open');

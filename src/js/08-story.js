@@ -28,6 +28,7 @@ function updateFleeceObjective() {
     setObjective(G.proof.has('checks') ? 'You have the campaign checks.' : 'Find the campaign checks at Rom HQ.', G.view ? 'Two doors. Two signs. One field.' : 'The South Pasture is through the other door. Supposedly.');
     return;
   }
+  if (lickObjective()) return;
   const need = Math.max(0, WOKE_GOAL - G.woke);
   const main = G.proof.size === 0 ? 'Find proof. It only shows up while you wear the glasses.' : 'Wake ' + need + ' more sheep. Each one needs the right proof.';
   setObjective(main, G.hint || 'Ask sheep questions to find out what they care about.');
@@ -135,12 +136,15 @@ function findInteract() {
       if (d < pt.r && d - 12 < bd) { bd = d - 12; best = { kind: 'portal', ref: pt, x: pt.x, y: pt.y - 44, label: G.view && pt.labelTruth ? pt.labelTruth : pt.label }; }
     }
   }
+  const lk = lickInteract();
+  if (lk) best = lk;
   const rk = rackInteract();
   if (rk) best = rk;
   return best;
 }
 function doInteract(it) {
   if (it.kind === 'rack') { chewRack(); return; }
+  if (it.kind === 'lick') { kickLick(); return; }
   if (it.kind === 'portal') usePortal(it.ref);
   else if (it.kind === 'dog') talkToDog(it.ref);
   else talkTo(it.ref);
@@ -188,7 +192,8 @@ function talkTo(s) {
   s.facing = G.player.x > s.x ? 1 : -1; s.grazing = false; s.idle = Math.max(s.idle, 2);
   let node;
   if (G.ch === 2 && !(s.sulk > 0)) { openDialog(ch2TalkNode(s)); return; }
-  if (s.sulk > 0) node = { who: s, text: pick(["Hmph. I'm not talking to you right now.", 'Hmph. Still thinking about what you said. Go away.', 'Hmph. Ask me later.']) };
+  if (s.lure) node = { who: s, text: pick(LURE_TALK) };
+  else if (s.sulk > 0) node = { who: s, text: pick(["Hmph. I'm not talking to you right now.", 'Hmph. Still thinking about what you said. Go away.', 'Hmph. Ask me later.']) };
   else if (s.kind === 'gerald') node = geraldNode(s);
   else if (s.kind === 'flock') node = flockNode(s);
   else if (s.kind === 'lamb') node = lambNode(s);
@@ -197,7 +202,11 @@ function talkTo(s) {
   openDialog(node);
 }
 function keyNode(s, txt) {
-  const L = LINES[s.id], ch = [];
+  const L = LINES[s.id], ch = [], sugar = s.relapsed && SUGAR_LINES[s.id];
+  if (sugar) ch.push({ label: 'Remind ' + L.pron + ' what ' + subjPron(s) + ' saw', tag: 'Wakes ' + L.pron + ' right back up', run: () => {
+    G.afterDialog = () => wakeSheep(s, true);
+    return { who: s, text: sugar.remind, choices: [{ label: 'Welcome back to the Black Sheep Society' }] };
+  } });
   ch.push({ label: 'Ask a question', run: () => ({ who: 'player', name: 'You', text: L.ask, choices: [{ label: 'Listen', run: () => {
     G.hint = L.hint; updateFleeceObjective();
     return { who: s, text: L.reply, choices: [{ label: 'Go on', run: () => keyNode(s, L.prompt) }] };
@@ -212,7 +221,7 @@ function keyNode(s, txt) {
     ch.push({ label: 'Yell "WOLF!"', run: () => { G.afterDialog = () => { unlock('cried'); loseCred('Nobody believes the sheep who cried wolf.'); }; return { who: s, text: L.wolf, choices: [{ label: 'Oops' }] }; } });
   }
   ch.push({ label: 'Leave', leave: true });
-  return { who: s, text: txt || L.intro, choices: ch };
+  return { who: s, text: txt || (sugar ? sugar.crash : L.intro), choices: ch };
 }
 function proofNode(s) {
   const L = LINES[s.id];
@@ -282,22 +291,26 @@ function loseCred(msg) {
 }
 function wakeSheep(s, counts) {
   if (s.state === 'woke') return;
-  s.state = 'woke'; s.wakeFx = 1.4; s.grazing = false;
+  const again = !!s.relapsed; // woken before, then put back to sleep by a sugar lick
+  s.state = 'woke'; s.relapsed = false; s.wakeFx = 1.4; s.grazing = false;
   Snd.play('wake');
   for (let i = 0; i < 14; i++) spawn({ type: 'star', x: s.x, y: s.y - 30, vx: rand(-120, 120), vy: rand(-160, -40), g: 260, life: 0.8, size: rand(3, 6) });
   if (s.id === 'ewenice' && G.ch === 1) later(0.5, eweniceLeaves);
   if (!counts) return;
-  G.woke++; G.wokePersonal++;
+  G.woke++; if (!again) G.wokePersonal++;
   G.playerDark = Math.min(0.72, G.woke * 0.24);
   syncHUD(); unlock('wool');
   if (G.phase !== 'fleecing') return;
   if (G.woke >= WOKE_GOAL) { later(0.6, startHerd); return; }
-  G.heat = G.woke;
+  G.heat = Math.max(G.heat, G.woke);
+  queueLick();
+  updateFleeceObjective();
+  if (G.flags['heat' + G.woke]) return; // each warning only once, even if a sugar lick knocked the count back down
+  G.flags['heat' + G.woke] = true;
   const dog = G.wolves.find((w) => w.id === 'biscuit');
   if (G.woke === 1) banner('The wolves are nervous', 'Patrols are speeding up.');
   else if (G.woke === 2) banner(dog && dog.ally ? 'Short a sheepdog' : 'Double duty', dog && dog.ally ? 'The shepherds are patrolling harder without Biscuit.' : 'Sgt. Biscuit is running faster.');
   else if (G.woke === 3) banner('Snap election!', 'Rom & Rem are spinning faster than ever.');
-  updateFleeceObjective();
 }
 function activateBiscuit() {
   const b = G.wolves.find((w) => w.id === 'biscuit');
@@ -332,6 +345,7 @@ function afterCaught() {
 function startHerd() {
   if (G.phase !== 'fleecing') return;
   if (G.wipe) { G.view = G.wipe.to; G.wipe = null; }
+  clearLick(); G.lickDue = 0;
   setPhase('herd');
   banner('Herd Mentality!', 'Awake sheep are waking their neighbors.', 3);
   ringChapelBell();

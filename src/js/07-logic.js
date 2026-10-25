@@ -27,6 +27,7 @@ function newGame(opts) {
     maxAlert: 0, invuln: 0, woozy: 0, playerDark: 0, rh: null, st: 0, fenceT: 0, disguisesGone: false, shock: null,
     flash: 0, flashColor: '255,255,255', talkTarget: null, hint: '', pendingEnd: null, afterDialog: null, sparkT: 0, baaCd: 0,
     seenBy: null, hiddenFrom: false, prayHidden: false, church: newChurch(), followCount: 0, endKind: null, interact: null, fade: null, noise: null,
+    lick: null, lickDue: 0, lickCd: 0, licksKicked: 0,
   });
   for (const b of solids) b.on = !b.ch || b.ch === ch;
   G.player = {
@@ -137,6 +138,9 @@ function updateSheep(s, dt) {
   if (s.run) {
     tx = s.run.x; ty = s.run.y; speed = s.run.speed || 215;
     if (dist(s.x, s.y, tx, ty) < 6) { const then = s.run.then; s.hx = tx; s.hy = ty; s.run = null; s.follow = false; s.wander = 80; s.idle = rand(0.5, 2); s.tx = s.x; s.ty = s.y; tx = null; if (then) then(s); }
+  } else if (s.lure) {
+    const L = lureTarget(s, dt);
+    if (L) { tx = L.tx; ty = L.ty; speed = LICK.speed; }
   } else if (s.follow && regionOf(s.x, s.y) === regionOf(p.x, p.y)) {
     const ang = s.fi * 2.39996 + 1.2, rad = 46 + 15 * Math.sqrt(s.fi + 1);
     tx = p.x + Math.cos(ang) * rad; ty = p.y + Math.sin(ang) * rad * 0.72;
@@ -160,7 +164,7 @@ function updateSheep(s, dt) {
       if (Math.abs(dx) > 1.5) s.facing = dx > 0 ? 1 : -1;
     } else s.walk = 0;
   } else s.walk = 0;
-  if (!s.run) collideCircle(s, 12);
+  if (!s.run && !s.lure) collideCircle(s, 12); // a lured sheep walks a path that was checked when the lick dropped
 }
 function separate() {
   const all = G.sheep, p = G.player;

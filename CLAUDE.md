@@ -19,7 +19,7 @@ These notes are for picking development back up in a new session. README.md has 
 ## How the code is put together
 
 - `build.py` concatenates `src/js/*.js` in filename order into one `'use strict'` IIFE and inlines it into `src/page.html`. Every file shares one scope, so later files extend earlier tables: `03b-regions.js` edits `SHEEP_DEFS` and `WOLF_DEFS`, `03c-church.js` adds the chapel, and `03d-ch2.js` adds Chapter 2.
-- File prefixes: 01 core and palette, 02 audio (`SFX` dictionary in `02-audio.js`, synthesized bleats in `02a`), 03 world data, 04 and 05 drawing, 06 render pass, 07 state and per-frame logic (`newGame`, detection), 08 story (phases, objectives, dialogs), 09 DOM and UI (HUD, endings, achievements), 10 boot and the debug API.
+- File prefixes: 01 core and palette, 02 audio (`SFX` dictionary in `02-audio.js`, synthesized bleats in `02a`), 03 world data, 04 and 05 drawing, 06 render pass, 07 state and per-frame logic (`newGame`, detection), 08 story (phases, objectives, dialogs; `08e-sugar.js` is Granny's sugar licks), 09 DOM and UI (HUD, endings, achievements), 10 boot and the debug API.
 - Everything is drawn with Canvas 2D. There are no image or audio assets.
 - Palettes: `PAL_SRC[key] = [candy, truth, real]`. The render pass sets `RT` (truth blend) and `RR` (real blend), and `P(key)` returns the blended color. `G.view` is 0 with the glasses off and 1 with them on; a wipe animates between them. In Chapter 2 the glasses-off view is "real", not candy (`offMode()`).
 - World regions are separate rectangles in one big map, joined by portals: ranch (0..1500 × 0..1300), acres = Sunny Acres (1880..3120 × 0..1000), field = North/South Pasture (1880..2920 × 1040..1780), church (160..1340 × 1600..2320), farm = Farmhouse interior (1700..3100 × 2100..2900). `regionOf(x, y)` checks them.
@@ -32,6 +32,12 @@ These notes are for picking development back up in a new session. README.md has 
 - `G.ch` is 1 or 2. `newGame({ ch, retry })` resets the world. Solids, statics, wolves and portals can carry `.ch` so they exist in one chapter only. `setupCh2()` wakes everyone, moves the friends to their Chapter 2 homes and makes Biscuit an ally.
 - `WOKE_GOAL` and `PROOF_COUNT` are `let`s set per chapter: Ch1 needs 4 woke sheep out of 5 proofs; Ch2 needs 3 on the Pig-O-Meter out of 6 proofs, and each friend needs two specific proofs (`LINES2[id].needs`).
 - Chapter 2 unlocks once `ch2Unlocked()` sees `store.ch2` or `store.best`, or the URL has `?chapter=2`.
+
+## Sugar licks (08e-sugar.js, Chapter 1 only)
+
+The wolves fight back. `wakeSheep` calls `queueLick()`, so the 1st and 3rd wake-ups each earn one lick (flags `lickAt1`, `lickAt3`). Once the player is in the ranch and `G.lickCd` runs out (3.5 s after the wake-up, and at least 22 s after the last lick), `dropLick()` picks an awake key sheep in the ranch (Barbara, Doug, Nana or Shirley) and puts the lick 170 to 220 px away. The spot must be clear of solids, have a clear straight path, and not sit behind a sign or building (`lickHidden`). Granny announces it, and her bubble swaps with the glasses.
+
+The sheep waits 2.5 s, then walks over at 15 px/s (about 12 to 14 s in all) without collision, since the path was checked. A ring on the ground and a pink edge arrow show the countdown. Kick it over (`interact` kind `lick`; E, or the touch button reads Kick) and the sheep stays awake. If the sheep gets there, `sugarCrash()` puts it back to sleep with `s.relapsed`, Woke -1. Its dialog then offers "Remind her what she saw", which wakes it with one choice and doesn't add to the "You woke" stat. The finale (`startHerd`) and `endGame` clear a live lick. Kicking both licks in one run unlocks Sugar-Free.
 
 ## Detection senses (07-logic.js)
 
@@ -53,10 +59,11 @@ Run `python3 build.py` first. Each script prints its checks and any console erro
 - `church.py`, `church_finale.py`: prayer stealth, Ewenice, the bell.
 - `objective.py`: the collapsible objective card.
 - `ch2.py`, `ch2_bureau.py`: Chapter 2 and the crow → agent → retirement loop.
+- `sugar.py`: Granny's sugar licks: drop, kick, eaten and re-woken, the second lick, Sugar-Free, the finale clearing a lick, none in Chapter 2, and the Kick button on a phone.
 - `feel.py`: grazing hides you, keyboard talk and choices, pause, retry. `sizes.py`: title and How to play screenshots at several screen sizes. `bench.py`: frame times.
 - `audio_check.py`, `bleat_render.js`, `bleat_analyze.py`: offline renders of the synthesized sounds.
 
-Debug API with `?debug`: `window.__wus` exposes `state, tp, skipReveal, give, talk, choose, choices, beat, catchMe, setCred, bench, portal, interact, use, region, wolf, sheep, wear, ch2, convince, crow, retireMe, protest, chew, pig, talkDog, setZoom, church, setChurch, face`.
+Debug API with `?debug`: `window.__wus` exposes `state, tp, skipReveal, give, talk, choose, choices, beat, catchMe, setCred, bench, portal, interact, use, region, wolf, sheep, wear, ch2, convince, crow, retireMe, protest, chew, pig, talkDog, setZoom, church, setChurch, face, lick, dropLick, kick`.
 
 Timing note: in headless runs, canvas work is flushed lazily, so per-call timings in `bench.py` can look slower than real frames. Use requestAnimationFrame frame deltas instead; the real median is about 16.7 ms in both chapters.
 
@@ -65,5 +72,6 @@ Timing note: in headless runs, canvas work is flushed lazily, so per-call timing
 - Sister Ewenice walks out of the chapel alone. Her congregation only joins at the finale, when she rings the bell, and they don't count toward the goal. An earlier version had the whole congregation leave with her, which read as waking 7 sheep when the goal said 4.
 - The "CIA fakes your death" idea became the Bureau faking your retirement. It keeps the paranoia, stays cartoonish, and ties into Sunny Acres.
 - In Ch2 the pigs look like dumb farm pigs with the glasses off and like suited masterminds with them on. Their speech bubbles swap the same way ("Oink." becomes "Motion to raise the fence.").
+- Sugar licks cost time, not progress: a sheep who eats one wakes again with a single "Remind her" choice. Only the key ranch sheep can be lured; Ewenice, Gerald, Kevin and Lambert never are, so the chapel walkout and the Sunny Acres rescue stay intact. The wake-up warning banners only show once each, even if a lick knocks the count back down.
 - Tone: deadpan signs that change meaning through the glasses, sheep puns, and cartoon peril with no gore.
 - Next story hook: the pigs answer to the Farmer in the Big House up the hill (Chapter 3).

@@ -86,6 +86,7 @@ function updatePlay(dt) {
   } else {
     if (G.bfly && G.bfly.away) updateButterfly(dt);
     if (G.phase === 'fleecing') {
+      updateLick(dt);
       if (G.ch === 1 && p.specsOn && G.view === 1 && !G.flags.sawRainbow && dist(p.x, p.y, RAINBOW.x, RAINBOW.y) < 220) { G.flags.sawRainbow = true; unlock('kevin'); }
     } else if (G.phase === 'herd') herdCheck();
     else if (G.phase === 'bigbaa') updateRhythm(dt);
@@ -154,7 +155,7 @@ function makeSnapshot() {
   return { wakeUpSheeple: {
     v: 1, phase: G.phase, px: p.x, py: p.y, hasSpecs: p.hasSpecs, specsOn: p.specsOn, cred: G.cred,
     proof: Array.from(G.proof), woke: G.sheep.filter((s) => s.state === 'woke').map((s) => s.id), wokeCount: G.woke, wokePersonal: G.wokePersonal,
-    heat: G.heat, time: G.time, flags: { retry: !!G.flags.retry, sawRainbow: !!G.flags.sawRainbow, outside: !!G.flags.outside, visitedAcres: !!G.flags.visitedAcres }, glassesTaken: G.glasses.taken,
+    heat: G.heat, time: G.time, flags: { retry: !!G.flags.retry, sawRainbow: !!G.flags.sawRainbow, outside: !!G.flags.outside, visitedAcres: !!G.flags.visitedAcres, lickAt1: !!G.flags.lickAt1, lickAt3: !!G.flags.lickAt3 }, glassesTaken: G.glasses.taken,
     ally: !!(G.wolves.find((w) => w.id === 'biscuit') || {}).ally, region: regionOf(p.x, p.y),
   } };
 }
@@ -245,6 +246,9 @@ if (DEBUG) {
     church() { const C = G.church; return { mode: C.mode, t: +C.t.toFixed(2), len: C.len, ewenice: C.ewenice, walkout: C.walkout, bellT: +C.bellT.toFixed(2), prayers: C.prayers }; },
     setChurch(mode, t) { const C = G.church; C.mode = mode; C.t = t || 0; if (mode === 'warn') C.warn = C.warn || 2; },
     face(id, x, y) { const w = G.wolves.find((q) => q.id === id); if (w) { w.dir = Math.atan2(y - w.y, x - w.x); } },
+    lick() { const L = G.lick; return L ? { x: Math.round(L.x), y: Math.round(L.y), tx: Math.round(L.tx), ty: Math.round(L.ty), sheep: L.sheep.id, prog: +lickProgress().toFixed(2), due: G.lickDue } : { due: G.lickDue, cd: +G.lickCd.toFixed(2), kicked: G.licksKicked }; },
+    dropLick(id) { return dropLick(id); },
+    kick() { kickLick(); },
   };
 }
 try { if (window.claude && window.claude.hot && typeof window.claude.hot.snapshot === 'function') window.claude.hot.snapshot(() => makeSnapshot()); } catch (e) { /* the viewer may not offer live updates */ }

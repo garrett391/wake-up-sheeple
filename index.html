@@ -705,6 +705,9 @@ const Snd = (() => {
     caw() { const t = now(); for (let i = 0; i < 2; i++) { const o = osc('sawtooth', 860, t + i * 0.2, 0.15, 0.07, 0.005); o.frequency.exponentialRampToValueAtTime(470, t + i * 0.2 + 0.15); noise(t + i * 0.2, 0.13, 0.05, 1600, 'bandpass', 2.2); } },
     oink() { const t = now(); for (let i = 0; i < 2; i++) { const o = osc('sawtooth', 230 - i * 20, t + i * 0.16, 0.14, 0.08, 0.008); o.frequency.exponentialRampToValueAtTime(150, t + i * 0.16 + 0.14); noise(t + i * 0.16, 0.12, 0.05, 650, 'bandpass', 3); } },
     snap() { const t = now(); noise(t, 0.07, 0.22, 3200, 'highpass', 1); osc('square', 1900, t, 0.04, 0.05); noise(t + 0.05, 0.12, 0.08, 900, 'bandpass', 2); },
+    lickDrop() { arp([84, 88, 91, 96], 0.05, 'triangle', 0.09, 0.22); },
+    kick() { const t = now(); const o = osc('sine', 190, t, 0.18, 0.3, 0.003); o.frequency.exponentialRampToValueAtTime(60, t + 0.18); noise(t + 0.02, 0.3, 0.12, 2400, 'bandpass', 0.8, fx, 700); },
+    crunch() { const t = now(); for (let i = 0; i < 3; i++) noise(t + i * 0.09, 0.07, 0.12, 2600 - i * 400, 'bandpass', 1.4); [79, 76, 72, 67].forEach((m, i) => osc('sine', mtof(m), t + 0.32 + i * 0.13, 0.4, 0.07, 0.01)); },
     sniff() { const t = now(); noise(t, 0.07, 0.08, 4000, 'highpass', 0.7); noise(t + 0.12, 0.07, 0.08, 4200, 'highpass', 0.7); },
   };
   return {
@@ -3106,6 +3109,9 @@ function drawParticles() {
       ctx.beginPath(); ctx.moveTo(0, 4); ctx.bezierCurveTo(-10, -4, -5, -11, 0, -5); ctx.bezierCurveTo(5, -11, 10, -4, 0, 4); ctx.fill(); ctx.restore();
     } else if (p.type === 'wool') {
       ctx.fillStyle = 'rgba(238,236,228,' + a.toFixed(2) + ')'; circles([[p.x, p.y, p.size], [p.x + p.size * 0.8, p.y - p.size * 0.4, p.size * 0.7], [p.x - p.size * 0.7, p.y - p.size * 0.3, p.size * 0.7]]); ctx.fill();
+    } else if (p.type === 'crumb') {
+      ctx.fillStyle = tr ? 'rgba(190,183,168,' + a.toFixed(2) + ')' : p.c ? 'rgba(255,140,198,' + a.toFixed(2) + ')' : 'rgba(255,255,255,' + a.toFixed(2) + ')';
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     } else if (p.type === 'dust') {
       ctx.fillStyle = 'rgba(200,180,150,' + (a * 0.6).toFixed(2) + ')'; circ(p.x, p.y, p.size * (1.6 - a * 0.6)); ctx.fill();
     } else if (p.type === 'hat') {
@@ -3220,6 +3226,7 @@ function renderWorld(t) {
   drawFeetRing();
   DL.length = 0;
   for (const d of STATIC) if ((!d.ch || d.ch === G.ch) && d.x1 >= VB.x0 && d.x0 <= VB.x1 && d.y1 >= VB.y0 && d.y0 <= VB.y1) DL.push(d);
+  if (G.lick && inVB(G.lick.x, G.lick.y)) DL.push({ y: G.lick.y, draw: drawLick });
   for (const s of G.sheep) if (inVB(s.x, s.y)) DL.push({ y: s.y, s });
   for (const w of G.wolves) if (w.active && inVB(w.x, w.y)) DL.push({ y: w.y, w });
   DL.push({ y: G.player.y, pl: true });
@@ -3230,20 +3237,22 @@ function renderWorld(t) {
   setScreenT();
   drawPost(t);
 }
-function drawGateArrow() {
+// an arrow at the screen edge pointing at a spot in the ranch that is off screen
+function drawEdgeArrow(wx, wy, label, fill) {
   if (regionOf(G.player.x, G.player.y) !== 'ranch') return;
-  const [gx, gy] = toScreen(GATEX, 990);
+  const [gx, gy] = toScreen(wx, wy);
   const m = 48;
   if (gx > m && gx < view.w - m && gy > m + 70 && gy < view.h - m) return;
   const cx = view.w / 2, cy = view.h / 2, dx = gx - cx, dy = gy - cy;
   const s = Math.min((view.w / 2 - m) / Math.max(1e-6, Math.abs(dx)), (view.h / 2 - m) / Math.max(1e-6, Math.abs(dy)));
   const ax = cx + dx * s, ay = cy + dy * s, ang = Math.atan2(dy, dx);
   ctx.save(); ctx.translate(ax, ay); ctx.rotate(ang);
-  ctx.fillStyle = '#FFE14D'; ctx.strokeStyle = '#22211F'; ctx.lineWidth = 2.5;
+  ctx.fillStyle = fill; ctx.strokeStyle = '#22211F'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-10, -13); ctx.lineTo(-4, 0); ctx.lineTo(-10, 13); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.restore();
-  textOutlined('Gate', ax - Math.cos(ang) * 30, ay - Math.sin(ang) * 30, 15, G.view ? F_TRUTH : F_BODY, '#FFFFFF', '#22211F', G.view ? '' : '700');
+  textOutlined(label, ax - Math.cos(ang) * 30, ay - Math.sin(ang) * 30, 15, G.view ? F_TRUTH : F_BODY, '#FFFFFF', '#22211F', G.view ? '' : '700');
 }
+function drawGateArrow() { drawEdgeArrow(GATEX, 990, 'Gate', '#FFE14D'); }
 function screenOverlays() {
   setScreenT();
   if (G.mode === 'play' && (G.view === 1 || G.church.mode === 'pray') && !G.wipe && G.maxAlert > 0.2) {
@@ -3259,6 +3268,7 @@ function screenOverlays() {
   if (G.fade) { const k = G.fade.t / G.fade.dur; ctx.fillStyle = 'rgba(14,12,20,' + clamp(1 - Math.abs(k * 2 - 1), 0, 1).toFixed(3) + ')'; ctx.fillRect(0, 0, view.w, view.h); }
   if (G.flash > 0) { ctx.fillStyle = 'rgba(' + G.flashColor + ',' + Math.min(1, G.flash).toFixed(3) + ')'; ctx.fillRect(0, 0, view.w, view.h); }
   if (G.mode === 'play' && G.phase === 'herd' && G.flags.herdReady) drawGateArrow();
+  if (G.mode === 'play' && G.phase === 'fleecing' && G.lick) drawEdgeArrow(G.lick.x, G.lick.y - 12, 'Sugar lick', '#FF8CC6');
   drawPrayerCaption();
 }
 function renderTitle() {
@@ -3327,6 +3337,7 @@ function newGame(opts) {
     maxAlert: 0, invuln: 0, woozy: 0, playerDark: 0, rh: null, st: 0, fenceT: 0, disguisesGone: false, shock: null,
     flash: 0, flashColor: '255,255,255', talkTarget: null, hint: '', pendingEnd: null, afterDialog: null, sparkT: 0, baaCd: 0,
     seenBy: null, hiddenFrom: false, prayHidden: false, church: newChurch(), followCount: 0, endKind: null, interact: null, fade: null, noise: null,
+    lick: null, lickDue: 0, lickCd: 0, licksKicked: 0,
   });
   for (const b of solids) b.on = !b.ch || b.ch === ch;
   G.player = {
@@ -3437,6 +3448,9 @@ function updateSheep(s, dt) {
   if (s.run) {
     tx = s.run.x; ty = s.run.y; speed = s.run.speed || 215;
     if (dist(s.x, s.y, tx, ty) < 6) { const then = s.run.then; s.hx = tx; s.hy = ty; s.run = null; s.follow = false; s.wander = 80; s.idle = rand(0.5, 2); s.tx = s.x; s.ty = s.y; tx = null; if (then) then(s); }
+  } else if (s.lure) {
+    const L = lureTarget(s, dt);
+    if (L) { tx = L.tx; ty = L.ty; speed = LICK.speed; }
   } else if (s.follow && regionOf(s.x, s.y) === regionOf(p.x, p.y)) {
     const ang = s.fi * 2.39996 + 1.2, rad = 46 + 15 * Math.sqrt(s.fi + 1);
     tx = p.x + Math.cos(ang) * rad; ty = p.y + Math.sin(ang) * rad * 0.72;
@@ -3460,7 +3474,7 @@ function updateSheep(s, dt) {
       if (Math.abs(dx) > 1.5) s.facing = dx > 0 ? 1 : -1;
     } else s.walk = 0;
   } else s.walk = 0;
-  if (!s.run) collideCircle(s, 12);
+  if (!s.run && !s.lure) collideCircle(s, 12); // a lured sheep walks a path that was checked when the lick dropped
 }
 function separate() {
   const all = G.sheep, p = G.player;
@@ -3716,6 +3730,7 @@ function updateFleeceObjective() {
     setObjective(G.proof.has('checks') ? 'You have the campaign checks.' : 'Find the campaign checks at Rom HQ.', G.view ? 'Two doors. Two signs. One field.' : 'The South Pasture is through the other door. Supposedly.');
     return;
   }
+  if (lickObjective()) return;
   const need = Math.max(0, WOKE_GOAL - G.woke);
   const main = G.proof.size === 0 ? 'Find proof. It only shows up while you wear the glasses.' : 'Wake ' + need + ' more sheep. Each one needs the right proof.';
   setObjective(main, G.hint || 'Ask sheep questions to find out what they care about.');
@@ -3823,12 +3838,15 @@ function findInteract() {
       if (d < pt.r && d - 12 < bd) { bd = d - 12; best = { kind: 'portal', ref: pt, x: pt.x, y: pt.y - 44, label: G.view && pt.labelTruth ? pt.labelTruth : pt.label }; }
     }
   }
+  const lk = lickInteract();
+  if (lk) best = lk;
   const rk = rackInteract();
   if (rk) best = rk;
   return best;
 }
 function doInteract(it) {
   if (it.kind === 'rack') { chewRack(); return; }
+  if (it.kind === 'lick') { kickLick(); return; }
   if (it.kind === 'portal') usePortal(it.ref);
   else if (it.kind === 'dog') talkToDog(it.ref);
   else talkTo(it.ref);
@@ -3876,7 +3894,8 @@ function talkTo(s) {
   s.facing = G.player.x > s.x ? 1 : -1; s.grazing = false; s.idle = Math.max(s.idle, 2);
   let node;
   if (G.ch === 2 && !(s.sulk > 0)) { openDialog(ch2TalkNode(s)); return; }
-  if (s.sulk > 0) node = { who: s, text: pick(["Hmph. I'm not talking to you right now.", 'Hmph. Still thinking about what you said. Go away.', 'Hmph. Ask me later.']) };
+  if (s.lure) node = { who: s, text: pick(LURE_TALK) };
+  else if (s.sulk > 0) node = { who: s, text: pick(["Hmph. I'm not talking to you right now.", 'Hmph. Still thinking about what you said. Go away.', 'Hmph. Ask me later.']) };
   else if (s.kind === 'gerald') node = geraldNode(s);
   else if (s.kind === 'flock') node = flockNode(s);
   else if (s.kind === 'lamb') node = lambNode(s);
@@ -3885,7 +3904,11 @@ function talkTo(s) {
   openDialog(node);
 }
 function keyNode(s, txt) {
-  const L = LINES[s.id], ch = [];
+  const L = LINES[s.id], ch = [], sugar = s.relapsed && SUGAR_LINES[s.id];
+  if (sugar) ch.push({ label: 'Remind ' + L.pron + ' what ' + subjPron(s) + ' saw', tag: 'Wakes ' + L.pron + ' right back up', run: () => {
+    G.afterDialog = () => wakeSheep(s, true);
+    return { who: s, text: sugar.remind, choices: [{ label: 'Welcome back to the Black Sheep Society' }] };
+  } });
   ch.push({ label: 'Ask a question', run: () => ({ who: 'player', name: 'You', text: L.ask, choices: [{ label: 'Listen', run: () => {
     G.hint = L.hint; updateFleeceObjective();
     return { who: s, text: L.reply, choices: [{ label: 'Go on', run: () => keyNode(s, L.prompt) }] };
@@ -3900,7 +3923,7 @@ function keyNode(s, txt) {
     ch.push({ label: 'Yell "WOLF!"', run: () => { G.afterDialog = () => { unlock('cried'); loseCred('Nobody believes the sheep who cried wolf.'); }; return { who: s, text: L.wolf, choices: [{ label: 'Oops' }] }; } });
   }
   ch.push({ label: 'Leave', leave: true });
-  return { who: s, text: txt || L.intro, choices: ch };
+  return { who: s, text: txt || (sugar ? sugar.crash : L.intro), choices: ch };
 }
 function proofNode(s) {
   const L = LINES[s.id];
@@ -3970,22 +3993,26 @@ function loseCred(msg) {
 }
 function wakeSheep(s, counts) {
   if (s.state === 'woke') return;
-  s.state = 'woke'; s.wakeFx = 1.4; s.grazing = false;
+  const again = !!s.relapsed; // woken before, then put back to sleep by a sugar lick
+  s.state = 'woke'; s.relapsed = false; s.wakeFx = 1.4; s.grazing = false;
   Snd.play('wake');
   for (let i = 0; i < 14; i++) spawn({ type: 'star', x: s.x, y: s.y - 30, vx: rand(-120, 120), vy: rand(-160, -40), g: 260, life: 0.8, size: rand(3, 6) });
   if (s.id === 'ewenice' && G.ch === 1) later(0.5, eweniceLeaves);
   if (!counts) return;
-  G.woke++; G.wokePersonal++;
+  G.woke++; if (!again) G.wokePersonal++;
   G.playerDark = Math.min(0.72, G.woke * 0.24);
   syncHUD(); unlock('wool');
   if (G.phase !== 'fleecing') return;
   if (G.woke >= WOKE_GOAL) { later(0.6, startHerd); return; }
-  G.heat = G.woke;
+  G.heat = Math.max(G.heat, G.woke);
+  queueLick();
+  updateFleeceObjective();
+  if (G.flags['heat' + G.woke]) return; // each warning only once, even if a sugar lick knocked the count back down
+  G.flags['heat' + G.woke] = true;
   const dog = G.wolves.find((w) => w.id === 'biscuit');
   if (G.woke === 1) banner('The wolves are nervous', 'Patrols are speeding up.');
   else if (G.woke === 2) banner(dog && dog.ally ? 'Short a sheepdog' : 'Double duty', dog && dog.ally ? 'The shepherds are patrolling harder without Biscuit.' : 'Sgt. Biscuit is running faster.');
   else if (G.woke === 3) banner('Snap election!', 'Rom & Rem are spinning faster than ever.');
-  updateFleeceObjective();
 }
 function activateBiscuit() {
   const b = G.wolves.find((w) => w.id === 'biscuit');
@@ -4020,6 +4047,7 @@ function afterCaught() {
 function startHerd() {
   if (G.phase !== 'fleecing') return;
   if (G.wipe) { G.view = G.wipe.to; G.wipe = null; }
+  clearLick(); G.lickDue = 0;
   setPhase('herd');
   banner('Herd Mentality!', 'Awake sheep are waking their neighbors.', 3);
   ringChapelBell();
@@ -4681,6 +4709,221 @@ function updateCh2(dt) {
   }
 }
 
+/* ---------------- the wolves fight back: Granny's Bonus Sugar Licks (Chapter 1) ---------------- */
+// After your 1st and 3rd wake-up, Granny leaves a sugar lick near one of your awake friends.
+// They shuffle over to it. Kick it over first, or they eat it and fall back asleep (Woke -1)
+// until you talk to them again.
+const LICK = { delay: 3.5, gap: 22, wait: 2.5, speed: 15, near: 44, dist: [170, 220] };
+Object.assign(PAL_SRC, {
+  lick: ['#FF8CC6', '#B9B3A6', '#D9CDB5'], lickSh: ['#EE5FA4', '#99938A', '#BCAF96'], lickHi: ['#FFE3F1', '#D6D1C6', '#EEE5D3'],
+});
+for (const k of ['lick', 'lickSh', 'lickHi']) PAL[k] = PAL_SRC[k].map(hex);
+
+const SUGAR_LINES = {
+  barbara: {
+    crash: 'Mmm, sugar... What were we talking about, hon? Something negative?',
+    remind: 'Sugar beet. SAWDUST. Right! One lick and I forgot the whole label. That stuff is a fence with frosting, hon.',
+  },
+  doug: {
+    crash: 'Mmm... Rom forever! Or Rem. Whichever one hands out the licks.',
+    remind: 'Two heads, one stomach. One lick and I was ready to vote again. Never again!',
+  },
+  nana: {
+    crash: 'Oh, how lovely. Free treats. I should pack my swimsuit for Sunny Acres, dear.',
+    remind: '312 in and not one out. One lick and I was packing for the pool. Thank you, dear.',
+  },
+  shirley: {
+    crash: 'Mmm. Sugar always helps the itch. Is the doctor in?',
+    remind: "'Cure: not stocked.' One lick and I wanted a lollipop. I'm itching for a revolution again.",
+  },
+};
+const LURE_SAY = ['Is that... a sugar lick?', 'Just one lick...', 'So... sweet...', 'Granny made it with love!', 'Free! FREE!'];
+const LURE_TALK = ["Can't talk. Sugar.", "Shh. There's a sugar lick right there. It's FREE.", "Just one lick. Then we'll talk. Promise."];
+const KICK_SAY = ['Hey! ...Wait. What was I doing?', 'Huh? Right. No more sugar.', 'That was close. So sweet. So close.'];
+{
+  // keep the Chapter 1 finish last among the Chapter 1 achievements
+  const all = Object.entries(ACH);
+  for (const [k] of all) delete ACH[k];
+  for (const [k, v] of all) { if (k === 'pastures') ACH.sugarfree = ['Sugar-Free', "Kick over both of Granny's sugar licks in one run"]; ACH[k] = v; }
+}
+
+const subjPron = (s) => (LINES[s.id] && LINES[s.id].pron === 'him' ? 'he' : 'she');
+const objPron = (s) => (LINES[s.id] && LINES[s.id].pron) || 'them';
+const lickable = (s) => s.state === 'woke' && s.kind === 'key' && s.home === 'ranch' && s.id !== 'ewenice' && !!SUGAR_LINES[s.id]
+  && !s.follow && !s.run && !s.lure && regionOf(s.x, s.y) === 'ranch';
+
+// called by wakeSheep: the 1st and 3rd wake-ups each earn one lick, once per run
+function queueLick() {
+  if (G.ch !== 1) return;
+  for (const n of [1, 3]) {
+    if (G.woke < n || G.flags['lickAt' + n]) continue;
+    G.flags['lickAt' + n] = true; G.lickDue++; G.lickCd = Math.max(G.lickCd, LICK.delay);
+  }
+}
+function lickPathClear(x0, y0, x1, y1) {
+  const n = Math.ceil(dist(x0, y0, x1, y1) / 10);
+  for (let i = 1; i <= n; i++) { const t = i / n; if (blockedAt(lerp(x0, x1, t), lerp(y0, y1, t), 13)) return false; }
+  return true;
+}
+// true if a sign, building or tree drawn after the lick would cover it
+function lickHidden(x, y) {
+  for (const d of STATIC) {
+    if (d.ch && d.ch !== G.ch) continue;
+    if (d.y > y && d.x0 < x + 46 && d.x1 > x - 20 && d.y0 < y + 4 && d.y1 > y - 52) return true;
+  }
+  return false;
+}
+function lickSpot(s) {
+  const p = G.player;
+  for (let k = 0; k < 150; k++) {
+    const a = Math.random() * TAU, r = rand(LICK.dist[0], LICK.dist[1]);
+    const x = s.x + Math.cos(a) * r, y = s.y + Math.sin(a) * r * 0.75;
+    if (x < FX0 + 50 || x > FX1 - 50 || y < FY0 + 60 || y > FY1 - 40) continue;
+    if (blockedAt(x, y, 26) || dist(x, y, p.x, p.y) < (k < 90 ? 140 : 70) || lickHidden(x, y)) continue;
+    const side = x > s.x ? 1 : -1;
+    if (!lickPathClear(s.x, s.y, x - side * 20, y + 1)) continue;
+    return { x, y, side };
+  }
+  return null;
+}
+function dropLick(onlyId) {
+  const pool = G.sheep.filter((s) => (!onlyId || s.id === onlyId) && lickable(s));
+  while (pool.length) {
+    const s = pool.splice(Math.floor(Math.random() * pool.length), 1)[0], spot = lickSpot(s);
+    if (!spot) continue;
+    const L = { x: spot.x, y: spot.y, side: spot.side, tx: spot.x - spot.side * 20, ty: spot.y + 1, t: 0, sheep: s, sayT: rand(3, 4) };
+    L.d0 = Math.max(1, dist(s.x, s.y, L.tx, L.ty));
+    G.lick = L; G.lickDue = Math.max(0, G.lickDue - 1); G.lickCd = LICK.gap;
+    s.lure = { wait: LICK.wait }; s.idle = 0; s.grazing = false; s.facing = spot.side;
+    say(s, 'Ooh! Is that a sugar lick?', 2.2);
+    const gr = G.wolves.find((w) => w.id === 'granny');
+    if (gr && gr.active) say2(gr, 'Free treats! Baked with love!', 'Stay sweet, dearie. Stay quiet.', 2.8);
+    Snd.play('lickDrop');
+    for (let i = 0; i < 10; i++) spawn({ type: 'star', x: L.x + rand(-14, 14), y: L.y - rand(6, 26), vx: rand(-40, 40), vy: rand(-90, -30), life: rand(0.5, 0.9), size: rand(3, 5) });
+    banner('Bonus Sugar Licks!', 'Granny left a treat for ' + s.name + '. Kick it over before ' + subjPron(s) + ' gets there.', 3);
+    updateFleeceObjective();
+    return true;
+  }
+  return false;
+}
+function updateLick(dt) {
+  if (G.ch !== 1 || G.phase !== 'fleecing') return;
+  const L = G.lick;
+  if (!L) {
+    if (!G.lickDue) return;
+    if (regionOf(G.player.x, G.player.y) !== 'ranch' || G.cut || G.fade) { G.lickCd = Math.max(G.lickCd, 2); return; }
+    G.lickCd = Math.max(0, G.lickCd - dt);
+    if (G.lickCd <= 0 && !dropLick()) G.lickCd = 1;
+    return;
+  }
+  L.t += dt;
+  const s = L.sheep;
+  if (!s || s.state !== 'woke' || s.follow || s.lure == null) { clearLick(); return; }
+  L.sayT -= dt;
+  if (L.sayT <= 0 && !s.bubble) { say(s, pick(LURE_SAY), 1.8); L.sayT = rand(3.5, 5); }
+  if (s.lure.wait <= 0 && dist(s.x, s.y, L.tx, L.ty) < 5) sugarCrash();
+}
+// the sheep's half of the lure, called from updateSheep: returns the point to walk to, or null to stand still
+function lureTarget(s, dt) {
+  const L = G.lick;
+  if (!L || L.sheep !== s) { s.lure = null; return null; }
+  if (s.lure.wait > 0) { s.lure.wait -= dt; s.grazing = false; s.walk = 0; s.facing = L.side; return null; }
+  return L;
+}
+function lickProgress() {
+  const L = G.lick, s = L && L.sheep;
+  return s ? clamp(1 - dist(s.x, s.y, L.tx, L.ty) / L.d0, 0, 1) : 0;
+}
+function sugarCrash() {
+  const L = G.lick, s = L.sheep;
+  G.lick = null; s.lure = null;
+  s.state = 'asleep'; s.relapsed = true; s.grazing = true; s.grazeIdle = true; s.idle = 3; s.tx = s.x; s.ty = s.y; s.stuck = 0;
+  G.woke = Math.max(0, G.woke - 1); G.playerDark = Math.min(0.72, G.woke * 0.24);
+  syncHUD(); Snd.play('crunch'); addShake(5);
+  for (let i = 0; i < 12; i++) spawn({ type: 'crumb', c: i % 2, x: L.x, y: L.y - 10, vx: rand(-90, 90), vy: rand(-150, -50), g: 420, life: rand(0.5, 0.9), size: rand(2, 3.5) });
+  say(s, 'Mmm... *crunch*', 2.2);
+  const o = objPron(s);
+  toast('Woke -1', s.name + ' ate the sugar lick and fell back asleep. Talk to ' + o + ' to wake ' + o + ' back up.');
+  G.hint = 'Hint: ' + s.name + ' ate a sugar lick. Remind ' + o + ' what ' + subjPron(s) + ' saw.';
+  updateFleeceObjective();
+}
+function kickLick() {
+  const L = G.lick;
+  if (!L) return;
+  const s = L.sheep, p = G.player;
+  G.lick = null;
+  if (s) { s.lure = null; s.idle = rand(1.5, 2.5); s.tx = s.x; s.ty = s.y; s.stuck = 0; }
+  G.licksKicked++;
+  Snd.play('kick'); addShake(4); p.hopT = 1; p.facing = L.x >= p.x ? 1 : -1;
+  for (let i = 0; i < 16; i++) spawn({ type: 'crumb', c: i % 2, x: L.x, y: L.y - 10, vx: rand(-170, 170), vy: rand(-240, -80), g: 520, life: rand(0.6, 1), size: rand(2, 4) });
+  pop(L.x, L.y - 40, 'Kicked!', true);
+  if (s) later(0.4, () => { if (!s.bubble) say(s, pick(KICK_SAY), 2.4); });
+  toast('Sugar lick kicked over', s ? s.name + ' is still awake.' : '');
+  if (G.licksKicked >= 2) unlock('sugarfree');
+  updateFleeceObjective();
+}
+// silently take the lick away (the finale started, or the run ended)
+function clearLick() {
+  const L = G.lick;
+  if (L && L.sheep) L.sheep.lure = null;
+  G.lick = null;
+  updateFleeceObjective();
+}
+function lickInteract() {
+  const L = G.lick, p = G.player;
+  if (!L || G.phase !== 'fleecing' || dist(p.x, p.y, L.x, L.y) > LICK.near) return null;
+  return { kind: 'lick', x: L.x, y: L.y - 46, label: 'Kick over the sugar lick' };
+}
+function lickObjective() {
+  const L = G.lick;
+  if (!L || !L.sheep) return false;
+  setObjective('Kick over the sugar lick before ' + L.sheep.name + ' gets to it.',
+    (touchMode ? 'Follow the pink arrow and tap Kick next to it.' : 'Follow the pink arrow and press E next to it.') + ' You can see it with the glasses off, too.');
+  return true;
+}
+
+/* drawing */
+function drawLick() {
+  const L = G.lick;
+  if (!L) return;
+  const tr = isTruthPass(), k = Math.min(1, L.t / 0.35), t = G.clock;
+  const sc = RM ? 1 : k < 1 ? easeOut(k) * (1 + 0.22 * Math.sin(k * Math.PI)) : 1;
+  ctx.save(); ctx.translate(L.x, L.y);
+  // how close the sheep is: a ring on the ground that closes as they shuffle over
+  ctx.lineWidth = 2; ctx.strokeStyle = tr ? 'rgba(40,40,40,0.25)' : 'rgba(255,95,162,0.25)';
+  ell(0, 1, 30, 10); ctx.stroke();
+  const prog = lickProgress();
+  if (prog > 0.01) {
+    ctx.lineWidth = 3.5; ctx.strokeStyle = tr ? 'rgba(200,55,45,0.9)' : 'rgba(255,61,139,0.95)';
+    ctx.beginPath(); ctx.ellipse(0, 1, 30, 10, 0, -Math.PI / 2, -Math.PI / 2 + TAU * prog); ctx.stroke();
+  }
+  if (!tr) {
+    const g = ctx.createRadialGradient(0, -12, 2, 0, -12, 34);
+    g.addColorStop(0, 'rgba(255,170,215,0.55)'); g.addColorStop(1, 'rgba(255,170,215,0)');
+    ctx.fillStyle = g; circ(0, -12, 34); ctx.fill();
+  }
+  ctx.scale(sc, sc);
+  fillE('shadow', 0, 1, 17, 5);
+  // the sign on a stick
+  fillR('woodSh', 20, -34, 3, 34);
+  fillR('wood', 4, -50, 40, 17, 3); fillR('board', 6, -48, 36, 13, 2);
+  signText('FREE!', 'STAY QUIET', 24, -41, 9, 32);
+  // the lick itself
+  fillR('lickSh', -13, -17, 26, 17, 4);
+  fillR('lick', -13, -21, 26, 15, 4);
+  fillE('lickHi', 0, -20, 11, 3.2);
+  if (tr) {
+    text('SUGAR', 0, -11, 7, F_TRUTH, P('ink'), 22);
+  } else {
+    ctx.fillStyle = '#FFFFFF';
+    circles([[-8, -15, 2.4], [-1, -13.5, 2.8], [6, -15.5, 2.2], [10, -14, 1.6]]); ctx.fill();
+    const tw = RM ? 0.5 : (Math.sin(t * 5) + 1) / 2;
+    sparkle(-10, -27, 3 + tw * 3, 'rgba(255,255,255,0.95)');
+    sparkle(9, -30, 2 + (1 - tw) * 3, 'rgba(255,225,240,0.95)');
+  }
+  ctx.restore();
+}
+
 /* ---------------- DOM ---------------- */
 const ui = {};
 ['hud', 'hud-top', 'objective', 'obj-toggle', 'obj-new', 'obj-act-text', 'obj-text', 'obj-sub', 'pip-cred', 'pip-woke', 'pip-proof', 'btn-sound', 'btn-pause', 'keys', 'touch', 'joy-zone', 'joy', 'joy-knob',
@@ -4762,7 +5005,7 @@ function updateTouchButtons() {
   if (!p) return;
   const setDis = (b, d) => { if (b.disabled !== d) b.disabled = d; };
   setDis(ui.tTalk, !G.interact);
-  const tl = G.interact && G.interact.kind === 'portal' ? 'Go' : 'Talk';
+  const ik = G.interact && G.interact.kind, tl = ik === 'portal' ? 'Go' : ik === 'lick' ? 'Kick' : 'Talk';
   if (ui.tTalk.textContent !== tl) ui.tTalk.textContent = tl;
   setDis(ui.tSpecs, !p.hasSpecs || G.phase === 'reveal' || G.phase === 'bigbaa' || G.phase === 'stampede' || G.phase === 'meadow');
   ui.tSpecs.classList.toggle('on', !!p.specsOn);
@@ -5007,6 +5250,7 @@ const ENDINGS = {
   retired: ['Bad ending', 'Retired', "The Bureau's paperwork was flawless. The flock got a lovely card: 'Retired! Voluntarily!' Nobody listens to a sheep who retired. The pool at Sunny Acres is very warm."],
 };
 function endGame(kind) {
+  if (G.lick) clearLick();
   G.mode = 'ending'; G.endKind = kind; G.modal = null;
   for (const el of [ui.hud, ui.touch, ui.rhythm, ui.banner, ui.dialog, ui.doc]) el.hidden = true;
   app.classList.remove('dlg-open');
@@ -5157,6 +5401,7 @@ function updatePlay(dt) {
   } else {
     if (G.bfly && G.bfly.away) updateButterfly(dt);
     if (G.phase === 'fleecing') {
+      updateLick(dt);
       if (G.ch === 1 && p.specsOn && G.view === 1 && !G.flags.sawRainbow && dist(p.x, p.y, RAINBOW.x, RAINBOW.y) < 220) { G.flags.sawRainbow = true; unlock('kevin'); }
     } else if (G.phase === 'herd') herdCheck();
     else if (G.phase === 'bigbaa') updateRhythm(dt);
@@ -5225,7 +5470,7 @@ function makeSnapshot() {
   return { wakeUpSheeple: {
     v: 1, phase: G.phase, px: p.x, py: p.y, hasSpecs: p.hasSpecs, specsOn: p.specsOn, cred: G.cred,
     proof: Array.from(G.proof), woke: G.sheep.filter((s) => s.state === 'woke').map((s) => s.id), wokeCount: G.woke, wokePersonal: G.wokePersonal,
-    heat: G.heat, time: G.time, flags: { retry: !!G.flags.retry, sawRainbow: !!G.flags.sawRainbow, outside: !!G.flags.outside, visitedAcres: !!G.flags.visitedAcres }, glassesTaken: G.glasses.taken,
+    heat: G.heat, time: G.time, flags: { retry: !!G.flags.retry, sawRainbow: !!G.flags.sawRainbow, outside: !!G.flags.outside, visitedAcres: !!G.flags.visitedAcres, lickAt1: !!G.flags.lickAt1, lickAt3: !!G.flags.lickAt3 }, glassesTaken: G.glasses.taken,
     ally: !!(G.wolves.find((w) => w.id === 'biscuit') || {}).ally, region: regionOf(p.x, p.y),
   } };
 }
@@ -5316,6 +5561,9 @@ if (DEBUG) {
     church() { const C = G.church; return { mode: C.mode, t: +C.t.toFixed(2), len: C.len, ewenice: C.ewenice, walkout: C.walkout, bellT: +C.bellT.toFixed(2), prayers: C.prayers }; },
     setChurch(mode, t) { const C = G.church; C.mode = mode; C.t = t || 0; if (mode === 'warn') C.warn = C.warn || 2; },
     face(id, x, y) { const w = G.wolves.find((q) => q.id === id); if (w) { w.dir = Math.atan2(y - w.y, x - w.x); } },
+    lick() { const L = G.lick; return L ? { x: Math.round(L.x), y: Math.round(L.y), tx: Math.round(L.tx), ty: Math.round(L.ty), sheep: L.sheep.id, prog: +lickProgress().toFixed(2), due: G.lickDue } : { due: G.lickDue, cd: +G.lickCd.toFixed(2), kicked: G.licksKicked }; },
+    dropLick(id) { return dropLick(id); },
+    kick() { kickLick(); },
   };
 }
 try { if (window.claude && window.claude.hot && typeof window.claude.hot.snapshot === 'function') window.claude.hot.snapshot(() => makeSnapshot()); } catch (e) { /* the viewer may not offer live updates */ }

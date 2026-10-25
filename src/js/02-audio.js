@@ -145,6 +145,9 @@ const Snd = (() => {
     caw() { const t = now(); for (let i = 0; i < 2; i++) { const o = osc('sawtooth', 860, t + i * 0.2, 0.15, 0.07, 0.005); o.frequency.exponentialRampToValueAtTime(470, t + i * 0.2 + 0.15); noise(t + i * 0.2, 0.13, 0.05, 1600, 'bandpass', 2.2); } },
     oink() { const t = now(); for (let i = 0; i < 2; i++) { const o = osc('sawtooth', 230 - i * 20, t + i * 0.16, 0.14, 0.08, 0.008); o.frequency.exponentialRampToValueAtTime(150, t + i * 0.16 + 0.14); noise(t + i * 0.16, 0.12, 0.05, 650, 'bandpass', 3); } },
     snap() { const t = now(); noise(t, 0.07, 0.22, 3200, 'highpass', 1); osc('square', 1900, t, 0.04, 0.05); noise(t + 0.05, 0.12, 0.08, 900, 'bandpass', 2); },
+    lickDrop() { arp([84, 88, 91, 96], 0.05, 'triangle', 0.09, 0.22); },
+    kick() { const t = now(); const o = osc('sine', 190, t, 0.18, 0.3, 0.003); o.frequency.exponentialRampToValueAtTime(60, t + 0.18); noise(t + 0.02, 0.3, 0.12, 2400, 'bandpass', 0.8, fx, 700); },
+    crunch() { const t = now(); for (let i = 0; i < 3; i++) noise(t + i * 0.09, 0.07, 0.12, 2600 - i * 400, 'bandpass', 1.4); [79, 76, 72, 67].forEach((m, i) => osc('sine', mtof(m), t + 0.32 + i * 0.13, 0.4, 0.07, 0.01)); },
     sniff() { const t = now(); noise(t, 0.07, 0.08, 4000, 'highpass', 0.7); noise(t + 0.12, 0.07, 0.08, 4200, 'highpass', 0.7); },
   };
   return {

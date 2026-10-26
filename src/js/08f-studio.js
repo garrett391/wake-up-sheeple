@@ -2,7 +2,7 @@
    Outside: a small studio in the southwest pasture, by the main gate. Inside: its own room, far below the ranch.
    Bellwether reads the news the whole flock follows. Through the glasses, his cue cards come in under the back
    door, pushed by a paw. While the ON AIR light is on, the two studio cameras catch anything that moves; you move
-   during the commercial breaks. Show him the cue cards and he rings his bell: Woke +2, because his viewers come too. */
+   during the commercial breaks. Show him the cue cards and he rings his bell. */
 const STUDIO = { x0: 96, y0: 935, x1: 246, y1: 990, door: 171 };
 solid(STUDIO.x0, STUDIO.y0, STUDIO.x1, STUDIO.y1, 'building', true);
 PATHS.push([[618, 985], [420, 990], [236, 1008]]);
@@ -41,7 +41,7 @@ PORTALS.push(
   { id: 'studioOut', ch: 1, region: 'studio', x: SET.exit, y: 2912, r: 34, to: 'studio', label: 'Leave the studio', labelTruth: 'Get out of here', arrive: [SET.exit, 2888] },
 );
 
-SHEEP_DEFS.push({ id: 'bellwether', name: 'Bellwether', kind: 'key', x: 700, y: 2612, wander: 0, home: 'studio', needs: 'cuecards', worth: 2 });
+SHEEP_DEFS.push({ id: 'bellwether', name: 'Bellwether', kind: 'key', x: 700, y: 2612, wander: 0, home: 'studio', needs: 'cuecards' });
 WOLF_DEFS.push(
   { id: 'producer', name: 'Producer Howlin', type: 'producer', ch: 1, x: 880, y: 2580, behavior: 'patrol', path: [[880, 2580], [1110, 2580], [1110, 2740], [880, 2740]], range: 170, half: 0.5, speed: 38, dir: 0 },
   { id: 'camA', name: 'Camera A', type: 'camera', ch: 1, x: CAMS[0][0], y: CAMS[0][1] - 30, behavior: 'sweep', base: -Math.PI / 2, amp: 0.6, freq: 0.33, range: 340, half: 0.3, sense: 'camera', dir: -Math.PI / 2 },
@@ -125,7 +125,6 @@ function bellwetherRings(s) {
   s.hopT = 1; Snd.play('bell'); later(0.8, () => Snd.play('bell'));
   say(s, 'This just in: the news is written by wolves!', 2.6);
   unlock('ringleader');
-  later(1.4, () => toast('Woke +2', "Bellwether's viewers heard the bell."));
   // around the end of the desk, then down past the cameras to the door
   const leg = (x, y, then) => ({ x, y, speed: 118, then });
   later(2.6, () => { if (regionOf(s.x, s.y) === 'studio') s.run = leg(NEWSDESK.x1 + 34, s.y, () => { s.run = leg(NEWSDESK.x1 + 34, 2760, () => { s.run = leg(SET.exit, 2900, () => studioExit(s, true)); }); }); });

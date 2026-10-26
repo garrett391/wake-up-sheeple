@@ -25,7 +25,7 @@ function newGame(opts) {
     proof: new Set(), woke: 0, wokePersonal: 0, cred: 3, heat: 0, sheepish: 0, ach: new Set(),
     flags: { retry: !!opts.retry }, timers: [], particles: [], pops: [], cut: null, camTarget: null,
     maxAlert: 0, invuln: 0, woozy: 0, playerDark: 0, rh: null, st: 0, fenceT: 0, disguisesGone: false, shock: null,
-    flash: 0, flashColor: '255,255,255', talkTarget: null, hint: '', pendingEnd: null, afterDialog: null, sparkT: 0, baaCd: 0,
+    flash: 0, flashColor: '255,255,255', talkTarget: null, hint: '', hintFor: null, pendingEnd: null, afterDialog: null, sparkT: 0, baaCd: 0,
     seenBy: null, hiddenFrom: false, prayHidden: false, church: newChurch(), followCount: 0, endKind: null, interact: null, fade: null, noise: null,
     lick: null, lickDue: 0, lickCd: 0, licksKicked: 0, licksDropped: 0, lickCut: null, studio: newStudio(), camHidden: false, heatLater: false,
   });

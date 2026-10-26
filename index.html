@@ -3379,7 +3379,7 @@ function newGame(opts) {
     proof: new Set(), woke: 0, wokePersonal: 0, cred: 3, heat: 0, sheepish: 0, ach: new Set(),
     flags: { retry: !!opts.retry }, timers: [], particles: [], pops: [], cut: null, camTarget: null,
     maxAlert: 0, invuln: 0, woozy: 0, playerDark: 0, rh: null, st: 0, fenceT: 0, disguisesGone: false, shock: null,
-    flash: 0, flashColor: '255,255,255', talkTarget: null, hint: '', pendingEnd: null, afterDialog: null, sparkT: 0, baaCd: 0,
+    flash: 0, flashColor: '255,255,255', talkTarget: null, hint: '', hintFor: null, pendingEnd: null, afterDialog: null, sparkT: 0, baaCd: 0,
     seenBy: null, hiddenFrom: false, prayHidden: false, church: newChurch(), followCount: 0, endKind: null, interact: null, fade: null, noise: null,
     lick: null, lickDue: 0, lickCd: 0, licksKicked: 0, licksDropped: 0, lickCut: null, studio: newStudio(), camHidden: false, heatLater: false,
   });
@@ -3962,7 +3962,7 @@ function keyNode(s, txt) {
     return { who: s, text: sugar.remind, choices: [{ label: 'Welcome back to the Black Sheep Society' }] };
   } });
   ch.push({ label: 'Ask a question', run: () => ({ who: 'player', name: 'You', text: L.ask, choices: [{ label: 'Listen', run: () => {
-    G.hint = L.hint; updateFleeceObjective();
+    G.hint = L.hint; G.hintFor = s.id; updateFleeceObjective();
     return { who: s, text: L.reply, choices: [{ label: 'Go on', run: () => keyNode(s, L.prompt) }] };
   } }] }) });
   if (G.proof.size) ch.push({ label: 'Show proof', tag: G.proof.size + ' of ' + PROOF_COUNT + ' found', run: () => proofNode(s) });
@@ -4047,12 +4047,13 @@ function wakeSheep(s, counts) {
   if (s.state === 'woke') return;
   const again = !!s.relapsed; // woken before, then put back to sleep by a sugar lick
   s.state = 'woke'; s.relapsed = false; s.wakeFx = 1.4; s.grazing = false;
+  if (G.hintFor === s.id) { G.hint = ''; G.hintFor = null; } // a hint about a sheep who's already awake is just noise
   Snd.play('wake');
   for (let i = 0; i < 14; i++) spawn({ type: 'star', x: s.x, y: s.y - 30, vx: rand(-120, 120), vy: rand(-160, -40), g: 260, life: 0.8, size: rand(3, 6) });
   if (s.id === 'ewenice' && G.ch === 1) later(0.5, eweniceLeaves);
   if (s.id === 'bellwether' && G.ch === 1 && counts) later(0.4, () => bellwetherRings(s));
   if (!counts) return;
-  G.woke += (s.def && s.def.worth) || 1; // Bellwether counts twice: his viewers wake up with him
+  G.woke++;
   if (!again) G.wokePersonal++;
   G.playerDark = Math.min(0.72, G.woke * 0.24);
   syncHUD(); unlock('wool');
@@ -4935,7 +4936,7 @@ function sugarCrash() {
   say(s, 'Mmm... *crunch*', 2.2);
   const o = objPron(s);
   toast('Woke -1', s.name + ' ate the sugar lick and fell back asleep. Talk to ' + o + ' to wake ' + o + ' back up.');
-  G.hint = 'Hint: ' + s.name + ' ate a sugar lick. Remind ' + o + ' what ' + subjPron(s) + ' saw.';
+  G.hint = 'Hint: ' + s.name + ' ate a sugar lick. Remind ' + o + ' what ' + subjPron(s) + ' saw.'; G.hintFor = s.id;
   updateFleeceObjective();
 }
 function kickLick() {
@@ -5019,7 +5020,7 @@ function drawLick() {
    Outside: a small studio in the southwest pasture, by the main gate. Inside: its own room, far below the ranch.
    Bellwether reads the news the whole flock follows. Through the glasses, his cue cards come in under the back
    door, pushed by a paw. While the ON AIR light is on, the two studio cameras catch anything that moves; you move
-   during the commercial breaks. Show him the cue cards and he rings his bell: Woke +2, because his viewers come too. */
+   during the commercial breaks. Show him the cue cards and he rings his bell. */
 const STUDIO = { x0: 96, y0: 935, x1: 246, y1: 990, door: 171 };
 solid(STUDIO.x0, STUDIO.y0, STUDIO.x1, STUDIO.y1, 'building', true);
 PATHS.push([[618, 985], [420, 990], [236, 1008]]);
@@ -5058,7 +5059,7 @@ PORTALS.push(
   { id: 'studioOut', ch: 1, region: 'studio', x: SET.exit, y: 2912, r: 34, to: 'studio', label: 'Leave the studio', labelTruth: 'Get out of here', arrive: [SET.exit, 2888] },
 );
 
-SHEEP_DEFS.push({ id: 'bellwether', name: 'Bellwether', kind: 'key', x: 700, y: 2612, wander: 0, home: 'studio', needs: 'cuecards', worth: 2 });
+SHEEP_DEFS.push({ id: 'bellwether', name: 'Bellwether', kind: 'key', x: 700, y: 2612, wander: 0, home: 'studio', needs: 'cuecards' });
 WOLF_DEFS.push(
   { id: 'producer', name: 'Producer Howlin', type: 'producer', ch: 1, x: 880, y: 2580, behavior: 'patrol', path: [[880, 2580], [1110, 2580], [1110, 2740], [880, 2740]], range: 170, half: 0.5, speed: 38, dir: 0 },
   { id: 'camA', name: 'Camera A', type: 'camera', ch: 1, x: CAMS[0][0], y: CAMS[0][1] - 30, behavior: 'sweep', base: -Math.PI / 2, amp: 0.6, freq: 0.33, range: 340, half: 0.3, sense: 'camera', dir: -Math.PI / 2 },
@@ -5142,7 +5143,6 @@ function bellwetherRings(s) {
   s.hopT = 1; Snd.play('bell'); later(0.8, () => Snd.play('bell'));
   say(s, 'This just in: the news is written by wolves!', 2.6);
   unlock('ringleader');
-  later(1.4, () => toast('Woke +2', "Bellwether's viewers heard the bell."));
   // around the end of the desk, then down past the cameras to the door
   const leg = (x, y, then) => ({ x, y, speed: 118, then });
   later(2.6, () => { if (regionOf(s.x, s.y) === 'studio') s.run = leg(NEWSDESK.x1 + 34, s.y, () => { s.run = leg(NEWSDESK.x1 + 34, 2760, () => { s.run = leg(SET.exit, 2900, () => studioExit(s, true)); }); }); });

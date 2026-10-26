@@ -213,7 +213,7 @@ function keyNode(s, txt) {
     return { who: s, text: sugar.remind, choices: [{ label: 'Welcome back to the Black Sheep Society' }] };
   } });
   ch.push({ label: 'Ask a question', run: () => ({ who: 'player', name: 'You', text: L.ask, choices: [{ label: 'Listen', run: () => {
-    G.hint = L.hint; updateFleeceObjective();
+    G.hint = L.hint; G.hintFor = s.id; updateFleeceObjective();
     return { who: s, text: L.reply, choices: [{ label: 'Go on', run: () => keyNode(s, L.prompt) }] };
   } }] }) });
   if (G.proof.size) ch.push({ label: 'Show proof', tag: G.proof.size + ' of ' + PROOF_COUNT + ' found', run: () => proofNode(s) });
@@ -298,12 +298,13 @@ function wakeSheep(s, counts) {
   if (s.state === 'woke') return;
   const again = !!s.relapsed; // woken before, then put back to sleep by a sugar lick
   s.state = 'woke'; s.relapsed = false; s.wakeFx = 1.4; s.grazing = false;
+  if (G.hintFor === s.id) { G.hint = ''; G.hintFor = null; } // a hint about a sheep who's already awake is just noise
   Snd.play('wake');
   for (let i = 0; i < 14; i++) spawn({ type: 'star', x: s.x, y: s.y - 30, vx: rand(-120, 120), vy: rand(-160, -40), g: 260, life: 0.8, size: rand(3, 6) });
   if (s.id === 'ewenice' && G.ch === 1) later(0.5, eweniceLeaves);
   if (s.id === 'bellwether' && G.ch === 1 && counts) later(0.4, () => bellwetherRings(s));
   if (!counts) return;
-  G.woke += (s.def && s.def.worth) || 1; // Bellwether counts twice: his viewers wake up with him
+  G.woke++;
   if (!again) G.wokePersonal++;
   G.playerDark = Math.min(0.72, G.woke * 0.24);
   syncHUD(); unlock('wool');

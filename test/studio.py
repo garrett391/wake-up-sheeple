@@ -2,7 +2,7 @@
 A: the door in the southwest pasture leads into the studio and back out.
 B: the broadcast cycles ON AIR -> wrap -> commercial break -> ON AIR.
 C: on air, the cameras catch you moving but not standing still; on the break they don't watch at all.
-D: Bellwether won't talk on air; on the break he talks, and the cue cards wake him for Woke +2 and Ringleader.
+D: Bellwether won't talk on air; on the break he talks, and the cue cards wake him (Woke +1, like anyone) and Ringleader, and his hint clears.
 E: he walks out to the ranch, and the finale picks him up.
 F: Chapter 2 has no studio crew; Bellwether stands outside the Bleat.
 G: phone width screenshot of the studio."""
@@ -125,7 +125,8 @@ with sync_playwright() as p:
     ev(pg, "__wus.talk('bellwether')"); pg.wait_for_timeout(200)
     checks["D talks on the break"] = ev(pg, "__wus.state().modal") == "dialog"
     show_cards(pg)
-    checks["D woke +2"] = ev(pg, "__wus.state().woke") == woke0 + 2
+    checks["D woke +1"] = ev(pg, "__wus.state().woke") == woke0 + 1
+    checks["D his cue card hint is gone"] = "cue cards" not in (ev(pg, "__wus.G.hint") or "")
     checks["D broadcast off"] = ev(pg, "__wus.studio().mode") == "off"
     checks["D Ringleader unlocked"] = "ringleader" in ev(pg, "(JSON.parse(localStorage.getItem('wake-up-sheeple') || '{}').ach || [])")
     pg.screenshot(path=str(SHOTS / "studio-woke.png"))
@@ -153,6 +154,12 @@ with sync_playwright() as p:
     ev(pg, "(() => { const s = __wus.G.sheep.find(s => s.id === 'bellwether'); s.x = 700; s.y = 2700; })()")
     ev(pg, "__wus.give('checks')"); ev(pg, "__wus.tp(1110, 446)"); ev(pg, "__wus.talk('doug')"); pg.wait_for_timeout(150)
     for i in [1, 1, 0]: print("   doug:", ev(pg, "__wus.choices()")); ev(pg, f"__wus.choose({i})"); pg.wait_for_timeout(150)
+    close_dialog(pg)
+    # Bellwether counts 1 like anyone, so one more: Shirley and the clinic price list
+    ev(pg, "__wus.give('prices')"); ev(pg, "(() => { const s = __wus.sheep('shirley'); __wus.tp(s.x, s.y + 26); })()"); ev(pg, "__wus.talk('shirley')"); pg.wait_for_timeout(150)
+    ev(pg, "__wus.choose(1)"); pg.wait_for_timeout(150)
+    ch = ev(pg, "__wus.choices()"); print("   shirley:", ch)
+    ev(pg, f"__wus.choose({next(i for i, c in enumerate(ch) if 'price' in c.lower())})"); pg.wait_for_timeout(150)
     close_dialog(pg)
     print("E2 woke:", ev(pg, "__wus.state()")["woke"])
     ok = wait_for(pg, "__wus.state().phase === 'herd'", 8000)

@@ -162,7 +162,7 @@ function sugarCrash() {
   say(s, 'Mmm... *crunch*', 2.2);
   const o = objPron(s);
   toast('Woke -1', s.name + ' ate the sugar lick and fell back asleep. Talk to ' + o + ' to wake ' + o + ' back up.');
-  G.hint = 'Hint: ' + s.name + ' ate a sugar lick. Remind ' + o + ' what ' + subjPron(s) + ' saw.';
+  G.hint = 'Hint: ' + s.name + ' ate a sugar lick. Remind ' + o + ' what ' + subjPron(s) + ' saw.'; G.hintFor = s.id;
   updateFleeceObjective();
 }
 function kickLick() {

@@ -30,8 +30,9 @@ def run(width, height, touch, tag):
         pg.on("console", lambda m: errors.append(f"[{tag}] {m.type}: {m.text}") if m.type in ("error", "warning") and "ERR_TUNNEL" not in m.text else None)
         pg.on("pageerror", lambda e: errors.append(f"[{tag}] pageerror: {e}"))
         pg.goto(URL); pg.wait_for_timeout(800)
-        print(tag, "ch2 button visible on title:", pg.is_visible("#btn-ch2"))
-        (pg.tap if touch else pg.click)("#btn-ch2"); pg.wait_for_timeout(1000)
+        (pg.tap if touch else pg.click)("#btn-chapters"); pg.wait_for_timeout(300)
+        print(tag, "chapter 2 open in Chapters:", pg.is_enabled('.chapter[data-ch="2"]'))
+        (pg.tap if touch else pg.click)('.chapter[data-ch="2"]'); pg.wait_for_timeout(1000)
         close(pg)
         pg.evaluate("__wus.skipReveal()"); pg.wait_for_timeout(300)
         ok = {}

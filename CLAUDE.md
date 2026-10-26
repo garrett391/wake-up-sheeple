@@ -32,6 +32,7 @@ These notes are for picking development back up in a new session. README.md has 
 - `G.ch` is 1 or 2. `newGame({ ch, retry })` resets the world. Solids, statics, wolves and portals can carry `.ch` so they exist in one chapter only. `setupCh2()` wakes everyone, moves the friends to their Chapter 2 homes and makes Biscuit an ally.
 - `WOKE_GOAL` and `PROOF_COUNT` are `let`s set per chapter: Ch1 needs 4 woke sheep out of 5 proofs; Ch2 needs 3 on the Pig-O-Meter out of 6 proofs, and each friend needs two specific proofs (`LINES2[id].needs`).
 - Chapter 2 unlocks once `ch2Unlocked()` sees `store.ch2` or `store.best`, or the URL has `?chapter=2`.
+- The title screen has Play (always Chapter 1), Chapters and How to play. Chapters opens `#scr-chapters`, built by `openChapters()` from the `CHAPTERS` list in `09-ui.js`: one entry per chapter with `n`, `name`, `blurb`, `best` (its best-time store key) and `start()`. A chapter opens once the previous one has a best time (Chapter 2 also via `ch2Unlocked()`); until then its card says "Locked" with no name or blurb, so the list never spoils a twist. An entry without `start()` shows "Coming soon" (Chapter 3, The Farmer, once Chapter 2 is finished). The end screen's next-chapter button comes from the same list. To add a chapter: add its entry, give it a start function and a `bestN` key in `endGame`.
 
 ## Sugar licks (08e-sugar.js, Chapter 1 only)
 
@@ -61,6 +62,7 @@ Run `python3 build.py` first. Each script prints its checks and any console erro
 - `church.py`, `church_finale.py`: prayer stealth, Ewenice, the bell.
 - `objective.py`: the collapsible objective card.
 - `ch2.py`, `ch2_bureau.py`: Chapter 2 and the crow → agent → retirement loop.
+- `chapters.py`: the Chapters screen: what is open, locked and coming soon, no spoilers, Esc and Back, starting a chapter, the end screen's next-chapter button, and phone width.
 - `sugar.py`: Granny's sugar licks: drop, kick, eaten and re-woken, the second lick, Sugar-Free, the finale clearing a lick, none in Chapter 2, and the Kick button on a phone.
 - `feel.py`: grazing hides you, keyboard talk and choices, pause, retry. `sizes.py`: title and How to play screenshots at several screen sizes. `bench.py`: frame times.
 - `audio_check.py`, `bleat_render.js`, `bleat_analyze.py`: offline renders of the synthesized sounds.

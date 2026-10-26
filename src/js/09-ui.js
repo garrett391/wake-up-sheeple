@@ -4,7 +4,7 @@ const ui = {};
   't-talk', 't-specs', 't-baa', 't-graze', 'banner', 'banner-title', 'banner-sub', 'toasts', 'rhythm', 'rhythm-fill', 'rhythm-hint',
   'dialog', 'dlg-portrait', 'dlg-name', 'dlg-text', 'dlg-sr', 'dlg-choices', 'doc', 'doc-title', 'doc-body', 'doc-ok',
   'scr-title', 'scr-how', 'scr-pause', 'scr-end', 'btn-play', 'btn-how', 'btn-how-play', 'btn-how-back', 'btn-resume', 'btn-restart',
-  'btn-again', 'btn-menu', 'btn-ch2', 'btn-end-ch2', 'woke-long', 'woke-short', 'end-kicker', 'end-title', 'end-text', 'end-stats', 'end-ach', 'ach-head', 'title-foot', 'how-controls', 'pause-controls',
+  'btn-again', 'btn-menu', 'btn-chapters', 'btn-end-next', 'scr-chapters', 'chapter-list', 'btn-chapters-back', 'woke-long', 'woke-short', 'end-kicker', 'end-title', 'end-text', 'end-stats', 'end-ach', 'ach-head', 'title-foot', 'how-controls', 'pause-controls',
 ].forEach((id) => { ui[id.replace(/-([a-z])/g, (m, c) => c.toUpperCase())] = document.getElementById(id); });
 
 const ICON = {
@@ -209,11 +209,12 @@ window.addEventListener('keydown', (e) => {
   if (k === 'escape' || k === 'p') {
     if (G.mode === 'play') { if (G.modal === 'pause') setPause(false); else if (!G.modal) setPause(true); }
     else if (G.mode === 'title' && !ui.scrHow.hidden) { ui.scrHow.hidden = true; ui.btnHow.focus({ preventScroll: true }); }
+    else if (G.mode === 'title' && !ui.scrChapters.hidden) closeChapters();
     return;
   }
   if (k === 'm') { Snd.toggleMute(); syncSoundBtn(); return; }
   if (k === 'o' && G.mode === 'play' && !G.modal) { if (!e.repeat) toggleObjective(); return; }
-  if (G.mode === 'title' && ui.scrHow.hidden && k === 'enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { Snd.init(); startPlay(); return; }
+  if (G.mode === 'title' && ui.scrHow.hidden && ui.scrChapters.hidden && k === 'enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { Snd.init(); startPlay(); return; }
   if (!e.repeat && !G.modal) pressed.add(k);
   keys.add(k);
 });
@@ -292,12 +293,11 @@ function refreshTitleFoot() {
   if (s.best) t += ' Your best: ' + fmtTime(s.best) + '.';
   if (ch2Unlocked()) t += ' Chapter 2 unlocked.';
   if (n) t += ' Achievements: ' + n + ' of ' + achKeys().length + '.';
-  ui.btnCh2.hidden = !ch2Unlocked();
   ui.titleFoot.textContent = t;
 }
 function startPlay() {
   G.mode = 'play';
-  for (const el of [ui.scrTitle, ui.scrHow, ui.scrEnd, ui.scrPause, ui.dialog, ui.doc, ui.rhythm]) el.hidden = true;
+  for (const el of [ui.scrTitle, ui.scrHow, ui.scrChapters, ui.scrEnd, ui.scrPause, ui.dialog, ui.doc, ui.rhythm]) el.hidden = true;
   ui.hud.hidden = false; ui.keys.hidden = touchMode; ui.touch.hidden = !touchMode;
   Snd.init(); Snd.setMode(offMode());
   syncHUD(true); syncSoundBtn();
@@ -311,12 +311,50 @@ function resetLens() {
 }
 function toTitle() {
   newGame({}); G.mode = 'title';
-  for (const el of [ui.hud, ui.touch, ui.scrEnd, ui.scrPause, ui.scrHow, ui.rhythm, ui.banner, ui.dialog, ui.doc]) el.hidden = true;
+  for (const el of [ui.hud, ui.touch, ui.scrEnd, ui.scrPause, ui.scrHow, ui.scrChapters, ui.rhythm, ui.banner, ui.dialog, ui.doc]) el.hidden = true;
   ui.scrTitle.hidden = false;
   updateCamera(0, true); resetLens(); Snd.setMode('candy'); refreshTitleFoot();
-  ui.btnCh2.hidden = !ch2Unlocked();
   ui.btnPlay.focus({ preventScroll: true });
 }
+/* ---------------- chapter select ----------------
+   One entry per chapter. A new chapter is one more entry here: its number, name, a line about it, the store key
+   for its best time, and how to start it. An entry without start() shows as "Coming soon". Each chapter opens
+   once the one before it is finished; names and blurbs stay hidden until then, so the list never spoils a twist. */
+const CHAPTERS = [
+  { n: 1, name: 'Greener Pastures', blurb: 'Find the glasses, prove the shepherds are wolves, and wake the flock.', best: 'best', start: () => restartChapter(1, false) },
+  { n: 2, name: 'Hogwash', blurb: 'The wolves are back, wearing badges. Follow the strings to the Farmhouse.', best: 'best2', start: startChapter2 },
+  { n: 3, name: 'The Farmer', blurb: 'Up the hill, a light just came on in the Big House.' },
+];
+function chapterOpen(c) {
+  if (c.n === 1) return true;
+  if (c.n === 2 && ch2Unlocked()) return true;
+  const prev = CHAPTERS.find((q) => q.n === c.n - 1);
+  return !!(prev && prev.best && store.get()[prev.best]);
+}
+function playChapter(n) { const c = CHAPTERS.find((q) => q.n === n); if (c && c.start && chapterOpen(c)) c.start(); }
+function openChapters() {
+  const s = store.get();
+  ui.chapterList.innerHTML = '';
+  for (const c of CHAPTERS) {
+    const open = chapterOpen(c), playable = open && !!c.start, li = document.createElement('li'), b = document.createElement('button');
+    b.type = 'button'; b.className = 'chapter'; b.dataset.ch = c.n; b.disabled = !playable;
+    const num = document.createElement('span'); num.className = 'num'; num.textContent = c.n;
+    const kicker = document.createElement('span'); kicker.className = 'kicker'; kicker.textContent = 'Chapter ' + c.n;
+    const name = document.createElement('span'); name.className = 'name'; name.textContent = open ? c.name : 'Locked';
+    const blurb = document.createElement('span'); blurb.className = 'blurb';
+    blurb.textContent = !open ? 'Finish Chapter ' + (c.n - 1) + ' to unlock.' : c.blurb;
+    const status = document.createElement('span'); status.className = 'status';
+    status.textContent = !open ? '' : !c.start ? 'Coming soon' : c.best && s[c.best] ? 'Finished. Best time ' + fmtTime(s[c.best]) : 'Not finished yet';
+    b.append(num, kicker, name, blurb);
+    if (status.textContent) b.append(status);
+    if (playable) b.addEventListener('click', () => { Snd.init(); c.start(); });
+    li.appendChild(b); ui.chapterList.appendChild(li);
+  }
+  ui.scrChapters.hidden = false;
+  const first = ui.chapterList.querySelector('.chapter:not(:disabled)');
+  if (first) first.focus({ preventScroll: true });
+}
+function closeChapters() { ui.scrChapters.hidden = true; ui.btnChapters.focus({ preventScroll: true }); }
 const ENDINGS = {
   win: ['True ending', 'Greener Pastures', "The fence comes down and the flock grazes wherever it pleases. You take off the glasses and the colors come back. Not candy-bright like before, but real. The grass is green because it's grass."],
   counted: ['Bad ending', 'Counted', 'You wake up in the meadow. Everything is bright and happy, and you feel uneasy for no reason. The glasses are still in the mud by the fence.'],
@@ -366,10 +404,12 @@ function endGame(kind) {
   }
   ui.achHead.textContent = 'Achievements: ' + keys.filter((id) => ever.has(id)).length + ' of ' + keys.length;
   ui.btnAgain.textContent = win ? 'Play again' : 'Try again';
-  ui.btnEndCh2.hidden = kind !== 'win';
-  ui.btnAgain.classList.toggle('quiet', kind === 'win');
+  const next = win ? CHAPTERS.find((c) => c.n === G.ch + 1) : null, goNext = !!(next && next.start && chapterOpen(next));
+  ui.btnEndNext.hidden = !goNext;
+  if (goNext) { ui.btnEndNext.textContent = 'Play Chapter ' + next.n + ': ' + next.name; ui.btnEndNext.dataset.ch = next.n; }
+  ui.btnAgain.classList.toggle('quiet', goNext);
   ui.scrEnd.hidden = false;
-  (kind === 'win' ? ui.btnEndCh2 : ui.btnAgain).focus({ preventScroll: true });
+  (goNext ? ui.btnEndNext : ui.btnAgain).focus({ preventScroll: true });
 }
 function restartChapter(ch, retry) {
   newGame({ ch, retry });
@@ -383,6 +423,7 @@ ui.btnHowBack.addEventListener('click', () => { ui.scrHow.hidden = true; ui.btnH
 ui.btnResume.addEventListener('click', () => setPause(false));
 ui.btnRestart.addEventListener('click', () => restartChapter(G.ch, false));
 ui.btnAgain.addEventListener('click', () => restartChapter(G.ch, G.endKind === 'counted'));
-ui.btnEndCh2.addEventListener('click', () => { Snd.init(); startChapter2(); });
-ui.btnCh2.addEventListener('click', () => { Snd.init(); startChapter2(); });
+ui.btnEndNext.addEventListener('click', () => { Snd.init(); playChapter(+ui.btnEndNext.dataset.ch); });
+ui.btnChapters.addEventListener('click', () => { Snd.init(); openChapters(); });
+ui.btnChaptersBack.addEventListener('click', closeChapters);
 ui.btnMenu.addEventListener('click', () => toTitle());

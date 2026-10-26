@@ -178,8 +178,6 @@ button{font:inherit;color:inherit}
 .tagline{margin:0;padding:6px 12px 5px;font:400 clamp(15px,2.2vw,19px)/1.25 var(--f-type);background:var(--paper);color:var(--ink);transform:rotate(-2deg);box-shadow:0 3px 0 var(--ink)}
 .title-actions{display:flex;flex-wrap:wrap;gap:12px}
 .ch2-btn{background:#F4A9B8;color:var(--grape)}
-#btn-ch2{flex-direction:column;gap:3px;line-height:1}
-#btn-ch2 small{font-size:11px;letter-spacing:.12em;text-transform:uppercase}
 #app.truth .ch2-btn,#app.real .ch2-btn{background:var(--ui-hi);color:var(--ui-fg)}
 .title-foot{margin:0;padding:6px 12px;font:600 14px/1.35 var(--f-body);color:var(--grape);background:var(--milk);border:2px solid var(--grape);border-radius:12px}
 .how,.menu,.end{width:min(560px,100%);padding:22px 22px 20px;display:flex;flex-direction:column;gap:14px}
@@ -198,6 +196,21 @@ button{font:inherit;color:inherit}
 .stats-list dd{margin:5px 0 0;font:var(--ui-w) 22px/1 var(--ui-font);font-variant-numeric:tabular-nums}
 .stats-list small{display:block;margin-top:4px;font:500 12px/1.2 var(--ui-font);color:var(--ui-accent)}
 .dlg-open #keys{visibility:hidden}
+
+/* chapter select: one row per chapter, built from CHAPTERS in 09-ui.js */
+.chapter-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.chapter{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:4px 16px;padding:12px 16px;text-align:left;background:var(--ui-hi);color:var(--ui-fg);border:var(--ui-bw) solid var(--ui-line);border-radius:max(3px,calc(var(--ui-r) - 4px));box-shadow:var(--ui-shadow);cursor:pointer;font-family:var(--ui-font);transition:transform .12s,box-shadow .12s}
+.chapter:hover:not(:disabled){transform:translate(-1px,-1px)}
+.chapter:active:not(:disabled){transform:translate(2px,2px);box-shadow:none}
+.chapter:focus-visible{outline:3px solid var(--ui-accent);outline-offset:3px}
+.chapter:disabled{cursor:default;background:var(--ui-bg);border-style:dashed;box-shadow:none;color:var(--ui-muted)}
+.chapter .num{grid-row:span 3;font:400 44px/1 var(--ui-head);color:var(--ui-accent);min-width:1ch;text-align:center}
+.chapter:disabled .num{color:var(--ui-muted)}
+.chapter .kicker{font:var(--ui-w) 11px/1.1 var(--ui-font);letter-spacing:.12em;text-transform:uppercase;color:var(--ui-muted)}
+.chapter .name{font:400 24px/1.1 var(--ui-head);text-transform:uppercase;text-wrap:balance}
+.chapter .blurb{font:500 14px/1.35 var(--ui-font);color:var(--ui-muted)}
+.chapter .status{grid-column:2;font:var(--ui-w) 13px/1.2 var(--ui-font);color:var(--ui-accent);font-variant-numeric:tabular-nums}
+.chapter:disabled .status{color:var(--ui-muted)}
 .ach-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;font:500 15px/1.35 var(--ui-font)}
 .ach-list li{display:flex;gap:10px;align-items:baseline}
 .ach-list .mark{flex:none;width:1.2em;text-align:center;color:var(--ui-accent)}
@@ -324,7 +337,7 @@ button{font:inherit;color:inherit}
       <div class="title-bottom">
         <div class="title-actions">
           <button type="button" class="btn btn-big" id="btn-play">Play</button>
-          <button type="button" class="btn btn-big ch2-btn" id="btn-ch2" hidden><span>Chapter 2</span><small>Hogwash</small></button>
+          <button type="button" class="btn btn-big ch2-btn" id="btn-chapters">Chapters</button>
           <button type="button" class="btn quiet" id="btn-how">How to play</button>
         </div>
         <p class="title-foot" id="title-foot">A playable demo. About 5 minutes, sound on.</p>
@@ -342,9 +355,17 @@ button{font:inherit;color:inherit}
         <li>Proof only shows up while you wear the glasses. Ask each sheep what's bothering them, then show them the proof that fits. The wrong proof makes them sulk.</li>
         <li>There's more out there than the pasture you can see. Try the barn doors, visit the chapel, and ask Kevin about Sunny Acres.</li>
         <li>Getting caught or crying wolf costs Credibility. Lose all 3 and nobody believes you.</li>
-        <li>Beat the game to unlock Chapter 2: Hogwash.</li>
+        <li>Finish Chapter 1 to unlock Chapter 2. Pick any chapter you've unlocked from Chapters on the title screen.</li>
       </ul>
       <div class="menu-actions"><button type="button" class="btn btn-big" id="btn-how-play">Play</button><button type="button" class="btn quiet" id="btn-how-back">Back</button></div>
+    </div>
+  </section>
+
+  <section id="scr-chapters" class="screen dim" hidden aria-labelledby="chapters-title">
+    <div class="card menu">
+      <h2 id="chapters-title">Chapters</h2>
+      <ul class="chapter-list" id="chapter-list"></ul>
+      <div class="menu-actions"><button type="button" class="btn quiet" id="btn-chapters-back">Back</button></div>
     </div>
   </section>
 
@@ -366,7 +387,7 @@ button{font:inherit;color:inherit}
         <span class="eyebrow" id="ach-head">Achievements</span>
         <ul class="ach-list" id="end-ach"></ul>
       </div>
-      <div class="menu-actions"><button type="button" class="btn btn-big ch2-btn" id="btn-end-ch2" hidden>Play Chapter 2: Hogwash</button><button type="button" class="btn btn-big" id="btn-again">Play again</button><button type="button" class="btn quiet" id="btn-menu">Title screen</button></div>
+      <div class="menu-actions"><button type="button" class="btn btn-big ch2-btn" id="btn-end-next" hidden>Next chapter</button><button type="button" class="btn btn-big" id="btn-again">Play again</button><button type="button" class="btn quiet" id="btn-menu">Title screen</button></div>
     </div>
   </section>
 </div>

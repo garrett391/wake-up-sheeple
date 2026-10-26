@@ -53,7 +53,7 @@ function updateTitle(dt) {
 function updatePlay(dt) {
   updateWipe(dt);
   G.flash = Math.max(0, G.flash - dt * 2.5);
-  if (G.modal) { updateCamera(dt); return; }
+  if (G.modal) { if (G.modal === 'lickcut') updateLickCut(dt); updateCamera(dt); return; }
   if (G.fade) {
     G.fade.t += dt;
     if (!G.fade.fired && G.fade.t >= G.fade.dur / 2) { G.fade.fired = true; G.fade.mid(); }

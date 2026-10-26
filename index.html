@@ -3337,7 +3337,7 @@ function newGame(opts) {
     maxAlert: 0, invuln: 0, woozy: 0, playerDark: 0, rh: null, st: 0, fenceT: 0, disguisesGone: false, shock: null,
     flash: 0, flashColor: '255,255,255', talkTarget: null, hint: '', pendingEnd: null, afterDialog: null, sparkT: 0, baaCd: 0,
     seenBy: null, hiddenFrom: false, prayHidden: false, church: newChurch(), followCount: 0, endKind: null, interact: null, fade: null, noise: null,
-    lick: null, lickDue: 0, lickCd: 0, licksKicked: 0,
+    lick: null, lickDue: 0, lickCd: 0, licksKicked: 0, licksDropped: 0, lickCut: null,
   });
   for (const b of solids) b.on = !b.ch || b.ch === ch;
   G.player = {
@@ -3450,7 +3450,7 @@ function updateSheep(s, dt) {
     if (dist(s.x, s.y, tx, ty) < 6) { const then = s.run.then; s.hx = tx; s.hy = ty; s.run = null; s.follow = false; s.wander = 80; s.idle = rand(0.5, 2); s.tx = s.x; s.ty = s.y; tx = null; if (then) then(s); }
   } else if (s.lure) {
     const L = lureTarget(s, dt);
-    if (L) { tx = L.tx; ty = L.ty; speed = LICK.speed; }
+    if (L) { tx = L.tx; ty = L.ty; speed = L.speed; }
   } else if (s.follow && regionOf(s.x, s.y) === regionOf(p.x, p.y)) {
     const ang = s.fi * 2.39996 + 1.2, rad = 46 + 15 * Math.sqrt(s.fi + 1);
     tx = p.x + Math.cos(ang) * rad; ty = p.y + Math.sin(ang) * rad * 0.72;
@@ -4010,7 +4010,7 @@ function wakeSheep(s, counts) {
   if (G.flags['heat' + G.woke]) return; // each warning only once, even if a sugar lick knocked the count back down
   G.flags['heat' + G.woke] = true;
   const dog = G.wolves.find((w) => w.id === 'biscuit');
-  if (G.woke === 1) banner('The wolves are nervous', 'Patrols are speeding up.');
+  if (G.woke === 1) toast('The wolves are nervous', 'Patrols are speeding up.');
   else if (G.woke === 2) banner(dog && dog.ally ? 'Short a sheepdog' : 'Double duty', dog && dog.ally ? 'The shepherds are patrolling harder without Biscuit.' : 'Sgt. Biscuit is running faster.');
   else if (G.woke === 3) banner('Snap election!', 'Rom & Rem are spinning faster than ever.');
 }
@@ -4713,7 +4713,9 @@ function updateCh2(dt) {
 // After your 1st and 3rd wake-up, Granny leaves a sugar lick near one of your awake friends.
 // They shuffle over to it. Kick it over first, or they eat it and fall back asleep (Woke -1)
 // until you talk to them again.
-const LICK = { delay: 3.5, gap: 22, wait: 2.5, speed: 15, near: 44, dist: [170, 220] };
+// delay and gap only count down while the screen is quiet (no banner, toast or dialog).
+// The first lick of a run walks slower (speed1) and opens with a short paused intro (lickIntro).
+const LICK = { delay: 6, gap: 22, wait: 2.5, speed: 15, speed1: 9, near: 44, dist: [170, 220], pan: 1.3 };
 Object.assign(PAL_SRC, {
   lick: ['#FF8CC6', '#B9B3A6', '#D9CDB5'], lickSh: ['#EE5FA4', '#99938A', '#BCAF96'], lickHi: ['#FFE3F1', '#D6D1C6', '#EEE5D3'],
 });
@@ -4791,17 +4793,19 @@ function dropLick(onlyId) {
   while (pool.length) {
     const s = pool.splice(Math.floor(Math.random() * pool.length), 1)[0], spot = lickSpot(s);
     if (!spot) continue;
-    const L = { x: spot.x, y: spot.y, side: spot.side, tx: spot.x - spot.side * 20, ty: spot.y + 1, t: 0, sheep: s, sayT: rand(3, 4) };
+    const first = !G.licksDropped;
+    const L = { x: spot.x, y: spot.y, side: spot.side, tx: spot.x - spot.side * 20, ty: spot.y + 1, t: 0, sheep: s, sayT: rand(3, 4), speed: first ? LICK.speed1 : LICK.speed };
     L.d0 = Math.max(1, dist(s.x, s.y, L.tx, L.ty));
-    G.lick = L; G.lickDue = Math.max(0, G.lickDue - 1); G.lickCd = LICK.gap;
+    G.lick = L; G.lickDue = Math.max(0, G.lickDue - 1); G.lickCd = LICK.gap; G.licksDropped = (G.licksDropped || 0) + 1;
     s.lure = { wait: LICK.wait }; s.idle = 0; s.grazing = false; s.facing = spot.side;
     say(s, 'Ooh! Is that a sugar lick?', 2.2);
     const gr = G.wolves.find((w) => w.id === 'granny');
     if (gr && gr.active) say2(gr, 'Free treats! Baked with love!', 'Stay sweet, dearie. Stay quiet.', 2.8);
     Snd.play('lickDrop');
     for (let i = 0; i < 10; i++) spawn({ type: 'star', x: L.x + rand(-14, 14), y: L.y - rand(6, 26), vx: rand(-40, 40), vy: rand(-90, -30), life: rand(0.5, 0.9), size: rand(3, 5) });
-    banner('Bonus Sugar Licks!', 'Granny left a treat for ' + s.name + '. Kick it over before ' + subjPron(s) + ' gets there.', 3);
     updateFleeceObjective();
+    if (first) lickIntro(L);
+    else toast('Another sugar lick', 'Granny left one for ' + s.name + '. Kick it over before ' + subjPron(s) + ' gets there.');
     return true;
   }
   return false;
@@ -4812,6 +4816,7 @@ function updateLick(dt) {
   if (!L) {
     if (!G.lickDue) return;
     if (regionOf(G.player.x, G.player.y) !== 'ranch' || G.cut || G.fade) { G.lickCd = Math.max(G.lickCd, 2); return; }
+    if (!screenQuiet()) return; // wait out banners and toasts so the lick is the only news
     G.lickCd = Math.max(0, G.lickCd - dt);
     if (G.lickCd <= 0 && !dropLick()) G.lickCd = 1;
     return;
@@ -4822,6 +4827,30 @@ function updateLick(dt) {
   L.sayT -= dt;
   if (L.sayT <= 0 && !s.bubble) { say(s, pick(LURE_SAY), 1.8); L.sayT = rand(3.5, 5); }
   if (s.lure.wait <= 0 && dist(s.x, s.y, L.tx, L.ty) < 5) sugarCrash();
+}
+const screenQuiet = () => !G.modal && ui.banner.hidden && ui.toasts.children.length === 0;
+// the first lick of a run: the camera pans to it, the game holds still, and one dialog explains it.
+// The sheep's countdown only starts once the dialog closes.
+function lickIntro(L) {
+  G.modal = 'lickcut'; G.lickCut = { t: 0 };
+  G.player.vx = G.player.vy = 0;
+  G.camTarget = { x: (L.x + L.sheep.x) / 2, y: (L.y + L.sheep.y) / 2 - 30 };
+}
+function updateLickCut(dt) {
+  const c = G.lickCut, L = G.lick;
+  if (!c) return;
+  c.t += dt;
+  if (L) L.t += dt; // let the lick pop in while the camera pans, so it is on screen for the dialog
+  if (c.t < LICK.pan) return;
+  G.lickCut = null; G.modal = null;
+  if (!L) { G.camTarget = null; return; }
+  const s = L.sheep, sub = subjPron(s), act = touchMode ? 'tap Kick' : 'press E';
+  const gr = G.wolves.find((w) => w.id === 'granny');
+  openDialog({ who: gr || 'system', name: 'Bonus Sugar Licks', text: 'Granny left ' + s.name + ' a free sugar lick. If ' + sub + ' eats it, ' + sub + ' falls back asleep.',
+    choices: [{ label: 'How do I stop it?', run: () => ({ who: 'system', name: 'Bonus Sugar Licks',
+      text: 'Get there first and kick it over: walk up to it and ' + act + '. The red ring around it fills as ' + s.name + ' gets closer. It shows with the glasses off, too.',
+      choices: [{ label: 'On it' }] }) }] });
+  G.afterDialog = () => { G.camTarget = null; };
 }
 // the sheep's half of the lure, called from updateSheep: returns the point to walk to, or null to stand still
 function lureTarget(s, dt) {
@@ -5368,7 +5397,7 @@ function updateTitle(dt) {
 function updatePlay(dt) {
   updateWipe(dt);
   G.flash = Math.max(0, G.flash - dt * 2.5);
-  if (G.modal) { updateCamera(dt); return; }
+  if (G.modal) { if (G.modal === 'lickcut') updateLickCut(dt); updateCamera(dt); return; }
   if (G.fade) {
     G.fade.t += dt;
     if (!G.fade.fired && G.fade.t >= G.fade.dur / 2) { G.fade.fired = true; G.fade.mid(); }

@@ -308,7 +308,7 @@ function wakeSheep(s, counts) {
   if (G.flags['heat' + G.woke]) return; // each warning only once, even if a sugar lick knocked the count back down
   G.flags['heat' + G.woke] = true;
   const dog = G.wolves.find((w) => w.id === 'biscuit');
-  if (G.woke === 1) banner('The wolves are nervous', 'Patrols are speeding up.');
+  if (G.woke === 1) toast('The wolves are nervous', 'Patrols are speeding up.');
   else if (G.woke === 2) banner(dog && dog.ally ? 'Short a sheepdog' : 'Double duty', dog && dog.ally ? 'The shepherds are patrolling harder without Biscuit.' : 'Sgt. Biscuit is running faster.');
   else if (G.woke === 3) banner('Snap election!', 'Rom & Rem are spinning faster than ever.');
 }

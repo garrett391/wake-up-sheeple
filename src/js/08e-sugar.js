@@ -2,7 +2,9 @@
 // After your 1st and 3rd wake-up, Granny leaves a sugar lick near one of your awake friends.
 // They shuffle over to it. Kick it over first, or they eat it and fall back asleep (Woke -1)
 // until you talk to them again.
-const LICK = { delay: 3.5, gap: 22, wait: 2.5, speed: 15, near: 44, dist: [170, 220] };
+// delay and gap only count down while the screen is quiet (no banner, toast or dialog).
+// The first lick of a run walks slower (speed1) and opens with a short paused intro (lickIntro).
+const LICK = { delay: 6, gap: 22, wait: 2.5, speed: 15, speed1: 9, near: 44, dist: [170, 220], pan: 1.3 };
 Object.assign(PAL_SRC, {
   lick: ['#FF8CC6', '#B9B3A6', '#D9CDB5'], lickSh: ['#EE5FA4', '#99938A', '#BCAF96'], lickHi: ['#FFE3F1', '#D6D1C6', '#EEE5D3'],
 });
@@ -80,17 +82,19 @@ function dropLick(onlyId) {
   while (pool.length) {
     const s = pool.splice(Math.floor(Math.random() * pool.length), 1)[0], spot = lickSpot(s);
     if (!spot) continue;
-    const L = { x: spot.x, y: spot.y, side: spot.side, tx: spot.x - spot.side * 20, ty: spot.y + 1, t: 0, sheep: s, sayT: rand(3, 4) };
+    const first = !G.licksDropped;
+    const L = { x: spot.x, y: spot.y, side: spot.side, tx: spot.x - spot.side * 20, ty: spot.y + 1, t: 0, sheep: s, sayT: rand(3, 4), speed: first ? LICK.speed1 : LICK.speed };
     L.d0 = Math.max(1, dist(s.x, s.y, L.tx, L.ty));
-    G.lick = L; G.lickDue = Math.max(0, G.lickDue - 1); G.lickCd = LICK.gap;
+    G.lick = L; G.lickDue = Math.max(0, G.lickDue - 1); G.lickCd = LICK.gap; G.licksDropped = (G.licksDropped || 0) + 1;
     s.lure = { wait: LICK.wait }; s.idle = 0; s.grazing = false; s.facing = spot.side;
     say(s, 'Ooh! Is that a sugar lick?', 2.2);
     const gr = G.wolves.find((w) => w.id === 'granny');
     if (gr && gr.active) say2(gr, 'Free treats! Baked with love!', 'Stay sweet, dearie. Stay quiet.', 2.8);
     Snd.play('lickDrop');
     for (let i = 0; i < 10; i++) spawn({ type: 'star', x: L.x + rand(-14, 14), y: L.y - rand(6, 26), vx: rand(-40, 40), vy: rand(-90, -30), life: rand(0.5, 0.9), size: rand(3, 5) });
-    banner('Bonus Sugar Licks!', 'Granny left a treat for ' + s.name + '. Kick it over before ' + subjPron(s) + ' gets there.', 3);
     updateFleeceObjective();
+    if (first) lickIntro(L);
+    else toast('Another sugar lick', 'Granny left one for ' + s.name + '. Kick it over before ' + subjPron(s) + ' gets there.');
     return true;
   }
   return false;
@@ -101,6 +105,7 @@ function updateLick(dt) {
   if (!L) {
     if (!G.lickDue) return;
     if (regionOf(G.player.x, G.player.y) !== 'ranch' || G.cut || G.fade) { G.lickCd = Math.max(G.lickCd, 2); return; }
+    if (!screenQuiet()) return; // wait out banners and toasts so the lick is the only news
     G.lickCd = Math.max(0, G.lickCd - dt);
     if (G.lickCd <= 0 && !dropLick()) G.lickCd = 1;
     return;
@@ -111,6 +116,30 @@ function updateLick(dt) {
   L.sayT -= dt;
   if (L.sayT <= 0 && !s.bubble) { say(s, pick(LURE_SAY), 1.8); L.sayT = rand(3.5, 5); }
   if (s.lure.wait <= 0 && dist(s.x, s.y, L.tx, L.ty) < 5) sugarCrash();
+}
+const screenQuiet = () => !G.modal && ui.banner.hidden && ui.toasts.children.length === 0;
+// the first lick of a run: the camera pans to it, the game holds still, and one dialog explains it.
+// The sheep's countdown only starts once the dialog closes.
+function lickIntro(L) {
+  G.modal = 'lickcut'; G.lickCut = { t: 0 };
+  G.player.vx = G.player.vy = 0;
+  G.camTarget = { x: (L.x + L.sheep.x) / 2, y: (L.y + L.sheep.y) / 2 - 30 };
+}
+function updateLickCut(dt) {
+  const c = G.lickCut, L = G.lick;
+  if (!c) return;
+  c.t += dt;
+  if (L) L.t += dt; // let the lick pop in while the camera pans, so it is on screen for the dialog
+  if (c.t < LICK.pan) return;
+  G.lickCut = null; G.modal = null;
+  if (!L) { G.camTarget = null; return; }
+  const s = L.sheep, sub = subjPron(s), act = touchMode ? 'tap Kick' : 'press E';
+  const gr = G.wolves.find((w) => w.id === 'granny');
+  openDialog({ who: gr || 'system', name: 'Bonus Sugar Licks', text: 'Granny left ' + s.name + ' a free sugar lick. If ' + sub + ' eats it, ' + sub + ' falls back asleep.',
+    choices: [{ label: 'How do I stop it?', run: () => ({ who: 'system', name: 'Bonus Sugar Licks',
+      text: 'Get there first and kick it over: walk up to it and ' + act + '. The red ring around it fills as ' + s.name + ' gets closer. It shows with the glasses off, too.',
+      choices: [{ label: 'On it' }] }) }] });
+  G.afterDialog = () => { G.camTarget = null; };
 }
 // the sheep's half of the lure, called from updateSheep: returns the point to walk to, or null to stand still
 function lureTarget(s, dt) {

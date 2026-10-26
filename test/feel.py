@@ -51,6 +51,12 @@ with sync_playwright() as p:
     page.screenshot(path=str(ROOT / "shots/feel-pause.png"))
     page.keyboard.press("Escape"); page.wait_for_timeout(200)
     print("resumed:", page.evaluate("__wus.state().modal"))
+    # pause -> Main menu, then back into the game
+    page.keyboard.press("Escape"); page.wait_for_timeout(200)
+    page.click("#btn-pause-menu"); page.wait_for_timeout(400)
+    print("main menu from pause:", page.is_visible("#scr-title"), not page.is_visible("#scr-pause"), page.evaluate("__wus.state().mode"))
+    page.click("#btn-play"); page.wait_for_timeout(300); page.evaluate("__wus.skipReveal()"); page.wait_for_timeout(300)
+    print("playing again:", page.evaluate("__wus.state().mode"), page.evaluate("__wus.state().modal"))
     # rapid toggles
     for _ in range(6): page.keyboard.press("Space"); page.wait_for_timeout(90)
     page.wait_for_timeout(900)

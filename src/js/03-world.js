@@ -163,7 +163,7 @@ const ACH = {
   wool: ['Pulled the Wool Off', 'Wake your first sheep'],
   cried: ['The Sheep Who Cried Wolf', 'Yell "WOLF!" at a sheep'],
   kevin: ['Kevin Was Right (Once)', 'Look at the rainbow with your glasses on'],
-  pastures: ['Greener Pastures', 'Finish the demo'],
+  pastures: ['Greener Pastures', 'Finish Chapter 1'],
 };
 
 /* ---------------- decor (seeded, so it is the same every visit) ---------------- */

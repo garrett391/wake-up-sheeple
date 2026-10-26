@@ -3,7 +3,7 @@ const ui = {};
 ['hud', 'hud-top', 'objective', 'obj-toggle', 'obj-new', 'obj-act-text', 'obj-text', 'obj-sub', 'pip-cred', 'pip-woke', 'pip-proof', 'btn-sound', 'btn-pause', 'keys', 'touch', 'joy-zone', 'joy', 'joy-knob',
   't-talk', 't-specs', 't-baa', 't-graze', 'banner', 'banner-title', 'banner-sub', 'toasts', 'rhythm', 'rhythm-fill', 'rhythm-hint',
   'dialog', 'dlg-portrait', 'dlg-name', 'dlg-text', 'dlg-sr', 'dlg-choices', 'doc', 'doc-title', 'doc-body', 'doc-ok',
-  'scr-title', 'scr-how', 'scr-pause', 'scr-end', 'btn-play', 'btn-how', 'btn-how-play', 'btn-how-back', 'btn-resume', 'btn-restart',
+  'scr-title', 'scr-how', 'scr-pause', 'scr-end', 'btn-play', 'btn-how', 'btn-how-play', 'btn-how-back', 'btn-resume', 'btn-pause-menu',
   'btn-again', 'btn-menu', 'btn-chapters', 'btn-end-next', 'scr-chapters', 'chapter-list', 'btn-chapters-back', 'woke-long', 'woke-short', 'end-kicker', 'end-title', 'end-text', 'end-stats', 'end-ach', 'ach-head', 'title-foot', 'how-controls', 'pause-controls',
 ].forEach((id) => { ui[id.replace(/-([a-z])/g, (m, c) => c.toUpperCase())] = document.getElementById(id); });
 
@@ -289,7 +289,7 @@ const fmtTime = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).pad
 const achKeys = () => Object.keys(ACH).filter((id) => !ACH_CH2.has(id) || ch2Unlocked());
 function refreshTitleFoot() {
   const s = store.get(), n = (s.ach || []).filter((id) => achKeys().indexOf(id) >= 0).length;
-  let t = 'A playable demo with three pastures and a chapel. About 10 minutes, sound on.';
+  let t = 'About 10 minutes a chapter. Sound on.';
   if (s.best) t += ' Your best: ' + fmtTime(s.best) + '.';
   if (ch2Unlocked()) t += ' Chapter 2 unlocked.';
   if (n) t += ' Achievements: ' + n + ' of ' + achKeys().length + '.';
@@ -441,7 +441,7 @@ ui.btnHow.addEventListener('click', () => { Snd.init(); fillControls(ui.howContr
 ui.btnHowPlay.addEventListener('click', () => { Snd.init(); playNext(); });
 ui.btnHowBack.addEventListener('click', () => { ui.scrHow.hidden = true; ui.btnHow.focus({ preventScroll: true }); });
 ui.btnResume.addEventListener('click', () => setPause(false));
-ui.btnRestart.addEventListener('click', () => restartChapter(G.ch, false));
+ui.btnPauseMenu.addEventListener('click', () => toTitle());
 ui.btnAgain.addEventListener('click', () => restartChapter(G.ch, G.endKind === 'counted'));
 ui.btnEndNext.addEventListener('click', () => { Snd.init(); playChapter(+ui.btnEndNext.dataset.ch); });
 ui.btnChapters.addEventListener('click', () => { Snd.init(); openChapters(); });

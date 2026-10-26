@@ -69,8 +69,8 @@ Run `python3 build.py` first. Each script prints its checks and any console erro
 - `ch2.py`, `ch2_bureau.py`: Chapter 2 and the crow → agent → retirement loop.
 - `chapters.py`: the Chapters screen: what is open, locked and coming soon, no spoilers, Esc and Back, starting a chapter, the end screen's next-chapter button, and phone width.
 - `sugar.py`: Granny's sugar licks: drop, kick, eaten and re-woken, the second lick, Sugar-Free, the finale clearing a lick, none in Chapter 2, and the Kick button on a phone.
-- `studio.py`: the Bleat: door in and out, the ON AIR cycle, cameras catch movement but not stillness and never on the break, Bellwether whispers on air, cue cards, Woke +2 and Ringleader, the walkout, the finale fetching him, Chapter 2, and a phone screenshot.
-- `feel.py`: grazing hides you, keyboard talk and choices, pause, retry. `sizes.py`: title and How to play screenshots at several screen sizes. `bench.py`: frame times.
+- `studio.py`: the Bleat: door in and out, the ON AIR cycle, cameras catch movement but not stillness and never on the break, Bellwether whispers on air, cue cards, Woke +1, his hint clearing, Ringleader, the walkout, the finale fetching him, Chapter 2, and a phone screenshot.
+- `feel.py`: grazing hides you, keyboard talk and choices, pause, Main menu from pause, retry. `sizes.py`: title and How to play screenshots at several screen sizes. `bench.py`: frame times.
 - `audio_check.py`, `bleat_render.js`, `bleat_analyze.py`: offline renders of the synthesized sounds.
 
 Debug API with `?debug`: `window.__wus` exposes `state, tp, skipReveal, give, talk, choose, choices, beat, catchMe, setCred, bench, portal, interact, use, region, wolf, sheep, wear, ch2, convince, crow, retireMe, protest, chew, pig, talkDog, setZoom, church, setChurch, face, studio, setStudio, lick, dropLick, kick`.

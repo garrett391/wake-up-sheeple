@@ -1,4 +1,4 @@
-"""Drive the demo in headless Chromium: title, meadow, glasses, reveal, stealth, dialogs, finale, endings."""
+"""Drive the game in headless Chromium: title, meadow, glasses, reveal, stealth, dialogs, finale, endings."""
 import json, pathlib, sys
 from playwright.sync_api import sync_playwright
 

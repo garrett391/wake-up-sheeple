@@ -29,7 +29,7 @@ assert '<div id="app"' in out, "page.html must contain the #app element"
 PAGES_HEAD = (
     '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
     '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-    '<meta name="description" content="Wake Up Sheeple: a playable demo. Put on the glasses, dodge the wolf shepherds, '
+    '<meta name="description" content="Wake Up Sheeple. Put on the glasses, dodge the wolf shepherds, '
     'and wake the flock. Then find out who pulls the strings.">\n'
     "<style>:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}"
     "[hidden]{display:none!important}</style>\n"

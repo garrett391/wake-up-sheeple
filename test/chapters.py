@@ -2,6 +2,7 @@
 A: a new player: Play starts Chapter 1; Chapters lists 1 open, 2 and 3 locked with no names (no spoilers).
 B: after finishing Chapter 1: Chapter 2 opens and shows its name; Chapter 3 stays locked; Esc and Back close the list.
 C: after finishing Chapter 2: Chapter 3 shows as "Coming soon" and can't be started.
+Play picks up where you left off: Chapter 1 for a new player, Chapter 2 once Chapter 1 is finished, Chapter 1 again once everything is.
 D: the end screen's next-chapter button and a phone-sized screenshot."""
 import pathlib
 from playwright.sync_api import sync_playwright
@@ -33,6 +34,7 @@ with sync_playwright() as p:
     # A: new player
     pg = page(b, store="{}")
     checks["chapters_button"] = pg.is_visible("#btn-chapters") and pg.is_visible("#btn-play")
+    checks["play_label_new"] = pg.text_content("#btn-play") == "Play"
     pg.click("#btn-chapters"); pg.wait_for_timeout(300)
     c = cards(pg); print("A:", c)
     checks["new_player_list"] = [x["enabled"] for x in c] == [True, False, False] and c[1]["name"] == "Locked" and c[2]["name"] == "Locked" \
@@ -47,6 +49,12 @@ with sync_playwright() as p:
 
     # B: Chapter 1 finished
     pg = page(b, store='{"ch2": true, "best": 252}')
+    lbl = pg.text_content("#btn-play"); print("B play label:", lbl)
+    checks["play_label_ch2"] = lbl == "PlayChapter 2: Hogwash" and pg.get_attribute("#btn-play", "aria-label") == "Play Chapter 2: Hogwash"
+    pg.screenshot(path=str(SHOTS / "chapters-00-title-continue.png"))
+    pg.click("#btn-play"); pg.wait_for_timeout(800)
+    checks["play_starts_ch2"] = pg.evaluate("__wus.G.ch") == 2 and pg.evaluate("__wus.G.mode") == "play"
+    pg.reload(); pg.wait_for_timeout(600)
     pg.click("#btn-chapters"); pg.wait_for_timeout(300)
     c = cards(pg); print("B:", c)
     checks["ch2_open"] = [x["enabled"] for x in c] == [True, True, False] and c[1]["name"] == "Hogwash" \
@@ -61,6 +69,10 @@ with sync_playwright() as p:
 
     # C: Chapter 2 finished
     pg = page(b, store='{"ch2": true, "best": 252, "best2": 431}')
+    checks["play_label_done"] = pg.text_content("#btn-play") == "Play"
+    pg.keyboard.press("Enter"); pg.wait_for_timeout(500)
+    checks["enter_plays_ch1"] = pg.evaluate("__wus.G.ch") == 1 and pg.evaluate("__wus.G.mode") == "play"
+    pg.reload(); pg.wait_for_timeout(600)
     pg.click("#btn-chapters"); pg.wait_for_timeout(300)
     c = cards(pg); print("C:", c)
     checks["ch3_soon"] = c[2]["name"] == "The Farmer" and c[2]["status"] == "Coming soon" and not c[2]["enabled"] and c[1]["status"] == "Finished. Best time 7:11"

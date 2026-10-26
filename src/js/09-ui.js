@@ -214,7 +214,7 @@ window.addEventListener('keydown', (e) => {
   }
   if (k === 'm') { Snd.toggleMute(); syncSoundBtn(); return; }
   if (k === 'o' && G.mode === 'play' && !G.modal) { if (!e.repeat) toggleObjective(); return; }
-  if (G.mode === 'title' && ui.scrHow.hidden && ui.scrChapters.hidden && k === 'enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { Snd.init(); startPlay(); return; }
+  if (G.mode === 'title' && ui.scrHow.hidden && ui.scrChapters.hidden && k === 'enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { Snd.init(); playNext(); return; }
   if (!e.repeat && !G.modal) pressed.add(k);
   keys.add(k);
 });
@@ -294,6 +294,7 @@ function refreshTitleFoot() {
   if (ch2Unlocked()) t += ' Chapter 2 unlocked.';
   if (n) t += ' Achievements: ' + n + ' of ' + achKeys().length + '.';
   ui.titleFoot.textContent = t;
+  refreshPlayButton();
 }
 function startPlay() {
   G.mode = 'play';
@@ -353,6 +354,25 @@ function openChapters() {
   ui.scrChapters.hidden = false;
   const first = ui.chapterList.querySelector('.chapter:not(:disabled)');
   if (first) first.focus({ preventScroll: true });
+}
+// Play picks up where you left off: the first chapter that is open, playable and not finished yet.
+// With everything finished, it goes back to Chapter 1.
+function nextChapter() {
+  const s = store.get();
+  return CHAPTERS.find((c) => c.start && chapterOpen(c) && !(c.best && s[c.best])) || CHAPTERS[0];
+}
+function playNext() {
+  const c = nextChapter();
+  if (c.n === 1) startPlay(); // the title already runs a fresh Chapter 1 world
+  else c.start();
+}
+function refreshPlayButton() {
+  const c = nextChapter();
+  ui.btnPlay.textContent = '';
+  const big = document.createElement('span'); big.textContent = 'Play';
+  ui.btnPlay.append(big);
+  if (c.n !== 1) { const sm = document.createElement('small'); sm.textContent = 'Chapter ' + c.n + ': ' + c.name; ui.btnPlay.append(sm); }
+  ui.btnPlay.setAttribute('aria-label', 'Play Chapter ' + c.n + ': ' + c.name);
 }
 function closeChapters() { ui.scrChapters.hidden = true; ui.btnChapters.focus({ preventScroll: true }); }
 const ENDINGS = {
@@ -416,9 +436,9 @@ function restartChapter(ch, retry) {
   startPlay();
   if (ch === 2) later(0.4, openCh2Intro);
 }
-ui.btnPlay.addEventListener('click', () => { Snd.init(); startPlay(); });
+ui.btnPlay.addEventListener('click', () => { Snd.init(); playNext(); });
 ui.btnHow.addEventListener('click', () => { Snd.init(); fillControls(ui.howControls); ui.scrHow.hidden = false; ui.btnHowPlay.focus({ preventScroll: true }); });
-ui.btnHowPlay.addEventListener('click', () => { Snd.init(); startPlay(); });
+ui.btnHowPlay.addEventListener('click', () => { Snd.init(); playNext(); });
 ui.btnHowBack.addEventListener('click', () => { ui.scrHow.hidden = true; ui.btnHow.focus({ preventScroll: true }); });
 ui.btnResume.addEventListener('click', () => setPause(false));
 ui.btnRestart.addEventListener('click', () => restartChapter(G.ch, false));

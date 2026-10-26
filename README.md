@@ -6,7 +6,7 @@ A satirical stealth-persuasion game for the browser. You're a sheep who finds a 
 
 **Play it:** https://garrett391.github.io/wake-up-sheeple/
 
-- **Chapter 1: Greener Pastures.** Sneak around the ranch, Sunny Acres, the North and South Pasture, and the chapel. Find the proof each sheep cares about, wake 4 of them, and lead the stampede with a Big Baa. Watch out for Granny's free sugar licks: kick them over before your friends eat one and fall back asleep.
+- **Chapter 1: Greener Pastures.** Sneak around the ranch, Sunny Acres, the North and South Pasture, the chapel, and the Bleat, Bellwether's TV studio, where the cameras catch anything that moves while ON AIR. Find the proof each sheep cares about, wake 4 of them, and lead the stampede with a Big Baa. Watch out for Granny's free sugar licks: kick them over before your friends eat one and fall back asleep.
 - **Chapter 2: Hogwash.** It unlocks once you beat Chapter 1; pick it from Chapters on the title screen. The wolves are back as "reformed" Farm Security, and through the glasses they have strings. The strings lead to the Farmhouse, where the pigs live. Your friends need two pieces of proof each, and the crows report you to the Bureau.
 
 ## Controls

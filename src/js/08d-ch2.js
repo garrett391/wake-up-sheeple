@@ -6,6 +6,7 @@ function say2(e, real, truth, dur) { e.bubble = { text: real, alt: truth, t: dur
 const bubbleText = (b) => (b.alt && (isTruthPass() || G.disguisesGone) ? b.alt : b.text);
 function wolfTop(w, mark) {
   if (w.type === 'dog') return mark ? 54 : 48;
+  if (w.type === 'camera') return mark ? 52 : 44;
   if (w.type === 'pastor') return mark ? 124 : 112;
   if (w.type === 'crow') return mark ? 82 : 74;
   if (w.type === 'pig') { const tr = ch2Truth(), k = w.role === 'chairman' ? 1.12 : 1; return (tr ? (mark ? 100 : 92) : mark ? 60 : 52) * k; }

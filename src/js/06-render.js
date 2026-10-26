@@ -30,6 +30,7 @@ function drawCones() {
       if (G.church.mode === 'pray') continue;
     }
     const sense = w.sense || 'cone';
+    if (sense === 'camera') { drawCamCone(w); continue; }
     if (sense === 'beam') { drawBeam(w); continue; }
     if (sense === 'sniff') { drawSniff(w); continue; }
     if (!isTruthPass() || !scouting) continue;
@@ -181,7 +182,7 @@ function drawFX() {
   if (p.bubble) bubbleAt(p.x, p.y - 56, p.bubble.text);
   if (G.phase === 'fleecing') {
     for (const w of G.wolves) if (w.active && w.alert > 0.04) drawAlertMark(w.x, w.y - wolfTop(w, true), w.alert);
-    if (G.hiddenFrom && (isTruthPass() || G.prayHidden || G.ch === 2) && !p.bubble) bubbleAt(p.x, p.y - 52, G.prayHidden ? 'Head bowed' : 'Hidden');
+    if (G.hiddenFrom && (isTruthPass() || G.prayHidden || G.camHidden || G.ch === 2) && !p.bubble) bubbleAt(p.x, p.y - 52, G.prayHidden ? 'Head bowed' : G.camHidden ? 'Holding still' : 'Hidden');
   }
   for (const s of G.sheep) if (s.sulk > 0 && inVB(s.x, s.y) && !s.bubble) drawSulk(s.x + 24 * (s.facing || 1), s.y - 44 * (s.scale || 1));
   if (G.mode === 'play' && G.interact && !G.modal && !G.fade) {
@@ -278,7 +279,7 @@ function drawEdgeArrow(wx, wy, label, fill) {
 function drawGateArrow() { drawEdgeArrow(GATEX, 990, 'Gate', '#FFE14D'); }
 function screenOverlays() {
   setScreenT();
-  if (G.mode === 'play' && (G.view === 1 || G.church.mode === 'pray') && !G.wipe && G.maxAlert > 0.2) {
+  if (G.mode === 'play' && (G.view === 1 || G.church.mode === 'pray' || studioLive()) && !G.wipe && G.maxAlert > 0.2) {
     const a = (G.maxAlert - 0.2) * 0.7 * (RM ? 1 : 0.75 + 0.25 * Math.sin(G.clock * 10));
     const g = ctx.createRadialGradient(view.w / 2, view.h / 2, Math.min(view.w, view.h) * 0.32, view.w / 2, view.h / 2, Math.hypot(view.w, view.h) * 0.6);
     g.addColorStop(0, 'rgba(200,40,30,0)'); g.addColorStop(1, 'rgba(200,40,30,' + a.toFixed(3) + ')');
@@ -293,6 +294,7 @@ function screenOverlays() {
   if (G.mode === 'play' && G.phase === 'herd' && G.flags.herdReady) drawGateArrow();
   if (G.mode === 'play' && G.phase === 'fleecing' && G.lick) drawEdgeArrow(G.lick.x, G.lick.y - 12, 'Sugar lick', '#FF8CC6');
   drawPrayerCaption();
+  drawStudioCaption();
 }
 function renderTitle() {
   renderWorld(0);

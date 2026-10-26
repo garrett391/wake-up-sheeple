@@ -59,6 +59,11 @@ function drawSheep(s, isP, opt) {
   if (s.id === 'nana') { ctx.fillStyle = P('shawl'); ctx.beginPath(); ctx.moveTo(-8, by - 8); ctx.quadraticCurveTo(4, by - 2, 13, by - 9); ctx.lineTo(14, by + 1); ctx.quadraticCurveTo(3, by + 7, -7, by + 1); ctx.closePath(); ctx.fill(); }
   if (s.id === 'doug' || s.id === 'norm') { fillC('sashA', 2, by + 3, 3.6); fillC('wool', 2, by + 3, 1.3); }
   if (s.id === 'southby') { fillC('sashB', 2, by + 3, 3.6); fillC('wool', 2, by + 3, 1.3); }
+  if (s.id === 'bellwether') {
+    ctx.strokeStyle = P('band'); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(8, by - 6); ctx.quadraticCurveTo(12, by + 3, 16, by - 2); ctx.stroke();
+    ctx.fillStyle = P('tag'); ctx.beginPath(); ctx.moveTo(9.6, by + 2); ctx.quadraticCurveTo(12, by - 4, 14.4, by + 2); ctx.lineTo(15.4, by + 6); ctx.lineTo(8.6, by + 6); ctx.closePath(); ctx.fill();
+    fillC('hatSh', 12, by + 7, 1.4);
+  }
   if (s.deep) { ctx.strokeStyle = '#D9342B'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-10, by - 6); ctx.lineTo(-2, by + 1); ctx.lineTo(6, by - 7); ctx.stroke(); fillC('bow', -2, by + 1, 2.4); fillC('woolHi', -2.6, by + 0.4, 0.9); }
   const hx = graze ? 18 : 16.5, hy = graze ? by + 11 : by - 6;
   ctx.save(); ctx.translate(hx, hy); if (graze) ctx.rotate(0.35);
@@ -96,6 +101,11 @@ function drawSheep(s, isP, opt) {
   if (s.id === 'gerald') {
     fillE('candyA', -1, -11, 9.5, 5.5, -0.15); fillE('candyA', 1, -15, 7, 4.5, -0.1); fillC('candyA', 4, -18, 3.4);
     ctx.strokeStyle = P('candyB'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-8, -10); ctx.lineTo(7, -13); ctx.stroke();
+  }
+  if (s.id === 'bellwether') {
+    ctx.strokeStyle = P('hatSh'); ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath();
+    for (let a = 0; a < 9.5; a += 0.3) { const r = 1 + a * 0.62; ctx.lineTo(-5 + Math.cos(a + 1.2) * r, -6 + Math.sin(a + 1.2) * r * 0.9); }
+    ctx.stroke();
   }
   if (s.id === 'kevin') {
     ctx.fillStyle = P('foil'); ctx.beginPath(); ctx.moveTo(-8.5, -8); ctx.lineTo(-1.5, -29); ctx.lineTo(7, -9.5); ctx.closePath(); ctx.fill();
@@ -172,6 +182,7 @@ function drawWolfBody(w, opt) {
   if (w.type === 'dog') { drawDog(w); ctx.restore(); return; }
   if (w.type === 'twohead') { drawTwoHead(w, wolfy); ctx.restore(); return; }
   if (w.type === 'pastor') { drawPastor(w, wolfy, portrait); ctx.restore(); return; }
+  if (w.type === 'camera') { ctx.restore(); drawCameraRig(w); return; }
   ctx.scale(w.facing || 1, 1);
   const moving = w.walk > 0.1;
   const bob = moving ? Math.abs(Math.sin(w.phase)) * 1.6 : 0;
@@ -187,7 +198,7 @@ function drawWolfBody(w, opt) {
     ctx.strokeStyle = P('crook'); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath();
     ctx.moveTo(-13, bob - 1); ctx.lineTo(-13, -74); ctx.arc(-7.5, -74, 5.5, Math.PI, TAU); ctx.lineTo(-2, -70); ctx.stroke();
   }
-  const armK = w.type === 'usher' ? 'suit' : w.type === 'guard' ? 'cap' : w.type === 'granny' ? 'shirtG' : w.type === 'doctor' || w.type === 'chef' ? 'coat' : 'shirtW';
+  const armK = w.type === 'usher' || w.type === 'producer' ? 'suit' : w.type === 'guard' ? 'cap' : w.type === 'granny' ? 'shirtG' : w.type === 'doctor' || w.type === 'chef' ? 'coat' : 'shirtW';
   const handK = wolfy ? 'fur' : 'skin';
   ctx.lineCap = 'round'; ctx.strokeStyle = P(armK); ctx.lineWidth = 6;
   const bx = w.type === 'shepherd' ? -12.5 : -12, byy = w.type === 'shepherd' ? -30 : -27 + sw * 0.4;
@@ -208,7 +219,7 @@ function drawWolfBody(w, opt) {
     ctx.fillStyle = P('awnA'); ctx.beginPath(); ctx.moveTo(-9, -30); ctx.lineTo(9, -30); ctx.lineTo(12, -8); ctx.lineTo(-12, -8); ctx.closePath(); ctx.fill();
   } else if (w.type === 'guard') {
     fillR('cap', -11, -48, 22, 28, 6); fillR('nose', -11, -26, 22, 4, 1); fillC('tag', 5, -41, 2.6); fillR('apron', -1.5, -48, 3, 6, 1);
-  } else if (w.type === 'usher') {
+  } else if (w.type === 'usher' || w.type === 'producer') {
     fillR('suit', -11, -48, 22, 28, 6);
     ctx.fillStyle = P('apron'); ctx.beginPath(); ctx.moveTo(-4, -48); ctx.lineTo(4, -48); ctx.lineTo(0, -37); ctx.closePath(); ctx.fill();
     fillR('band', -3.6, -47.5, 7.2, 3, 1.2); fillC('awnA', 6.5, -42, 1.8);
@@ -225,6 +236,7 @@ function drawWolfBody(w, opt) {
   if (!w.waving && !w.hatOff) {
     if (w.type === 'granny') fillR('candyA', fx - 1, fy - 9, 8, 7, 1.5);
     if (w.type === 'usher') drawPlate(fx, fy, wolfy);
+    if (w.type === 'producer') { fillR('wood', fx - 2, fy - 12, 10, 13, 1); fillR('apron', fx - 0.5, fy - 10, 7, 9); }
     if (w.type === 'guard') { fillR('iron', fx - 1, fy - 3, 10, 5, 1.5); fillC('flame', fx + 9, fy - 0.5, 2); }
     if (w.type === 'doctor') { fillR('wood', fx - 2, fy - 11, 9, 12, 1); fillR('apron', fx - 0.5, fy - 9, 6, 8); }
     if (w.type === 'chef') {
@@ -243,7 +255,11 @@ function drawWolfBody(w, opt) {
       else { fillR('awnA', -10, hy - 10 - hb, 20, 4, 2); fillE('awnA', 8, hy - 7.5 - hb, 7, 2.4); }
     }
     else if (w.type === 'guard') { fillR('cap', -9.5, hy - 15 - hb, 19, 8, 3); fillE('nose', 6, hy - 7 - hb, 7.5, 1.8); fillC('tag', 0, hy - 11.5 - hb, 1.7); }
-    else if (w.type !== 'usher') headMirror(hy, hb);
+    else if (w.type === 'producer') {
+      // a headset with a little microphone
+      ctx.strokeStyle = P('nose'); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, hy - 1 - hb, 11, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+      fillE('nose', -9.5, hy + 1 - hb, 2.6, 3.6); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-9, hy + 4 - hb); ctx.quadraticCurveTo(-4, hy + 11 - hb, 4, hy + 9 - hb); ctx.stroke(); fillC('onair', 4.5, hy + 9 - hb, 1.6);
+    } else if (w.type !== 'usher') headMirror(hy, hb);
   }
   if (wolfy) wolfEars(hy);
   ctx.restore();

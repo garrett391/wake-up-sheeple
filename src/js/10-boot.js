@@ -73,6 +73,7 @@ function updatePlay(dt) {
   for (const s of G.sheep) updateSheep(s, dt);
   separate();
   updateChurch(dt);
+  updateStudio(dt);
   updateCh2(dt);
   updateWolves(dt);
   if (G.phase === 'fleecing') detect(dt); else { G.maxAlert = 0; G.seenBy = null; G.hiddenFrom = false; }
@@ -185,6 +186,7 @@ function restoreSnapshot(s) {
       if (sh.id === 'gerald') { sh.home = 'ranch'; sh.x = sh.hx = sh.tx = 430; sh.y = sh.hy = sh.ty = 330; PEN_GATE.on = false; }
       if (sh.id === 'ewenice') G.church.ewenice = true; else if (sh.home === 'church') G.church.walkout = true;
       if (sh.home === 'church') exitChurch(sh, false);
+      if (sh.id === 'bellwether') { G.studio.mode = 'off'; studioExit(sh, false); }
     }
     G.woke = s.wokeCount | 0; G.wokePersonal = s.wokePersonal | 0; G.playerDark = Math.min(0.72, G.woke * 0.24); G.heat = s.heat | 0;
     if (G.heat >= 2) { const b = G.wolves.find((w) => w.id === 'biscuit'); if (b) b.active = true; }
@@ -246,6 +248,8 @@ if (DEBUG) {
     church() { const C = G.church; return { mode: C.mode, t: +C.t.toFixed(2), len: C.len, ewenice: C.ewenice, walkout: C.walkout, bellT: +C.bellT.toFixed(2), prayers: C.prayers }; },
     setChurch(mode, t) { const C = G.church; C.mode = mode; C.t = t || 0; if (mode === 'warn') C.warn = C.warn || 2; },
     face(id, x, y) { const w = G.wolves.find((q) => q.id === id); if (w) { w.dir = Math.atan2(y - w.y, x - w.x); } },
+    studio() { const S = G.studio; return { mode: S.mode, t: +S.t.toFixed(2), len: S.len }; },
+    setStudio(mode, t) { const S = G.studio; S.mode = mode; S.t = t || 0; },
     lick() { const L = G.lick; return L ? { x: Math.round(L.x), y: Math.round(L.y), tx: Math.round(L.tx), ty: Math.round(L.ty), sheep: L.sheep.id, prog: +lickProgress().toFixed(2), due: G.lickDue } : { due: G.lickDue, cd: +G.lickCd.toFixed(2), kicked: G.licksKicked }; },
     dropLick(id) { return dropLick(id); },
     kick() { kickLick(); },

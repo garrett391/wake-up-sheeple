@@ -43,6 +43,7 @@ function drawRegionGrounds() {
   }
   drawChurchGround();
   drawFarmGround();
+  drawStudioGround();
 }
 
 /* Sunny Acres */

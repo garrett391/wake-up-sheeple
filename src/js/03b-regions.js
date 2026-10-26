@@ -6,7 +6,7 @@ const REGIONS = {
   field: { x0: 1880, y0: 1040, x1: 2920, y1: 1780, ix0: 1926, iy0: 1146, ix1: 2874, iy1: 1640 },
 };
 function regionOf(x, y) {
-  for (const k of ['acres', 'field', 'church', 'farm']) { const r = REGIONS[k]; if (x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) return k; }
+  for (const k of ['acres', 'field', 'church', 'farm', 'studio']) { const r = REGIONS[k]; if (r && x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) return k; }
   return 'ranch';
 }
 // keep the ranch closed now that the world is wider than it

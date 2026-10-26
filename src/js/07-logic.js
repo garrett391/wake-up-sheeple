@@ -27,7 +27,7 @@ function newGame(opts) {
     maxAlert: 0, invuln: 0, woozy: 0, playerDark: 0, rh: null, st: 0, fenceT: 0, disguisesGone: false, shock: null,
     flash: 0, flashColor: '255,255,255', talkTarget: null, hint: '', pendingEnd: null, afterDialog: null, sparkT: 0, baaCd: 0,
     seenBy: null, hiddenFrom: false, prayHidden: false, church: newChurch(), followCount: 0, endKind: null, interact: null, fade: null, noise: null,
-    lick: null, lickDue: 0, lickCd: 0, licksKicked: 0, licksDropped: 0, lickCut: null,
+    lick: null, lickDue: 0, lickCd: 0, licksKicked: 0, licksDropped: 0, lickCut: null, studio: newStudio(), camHidden: false, heatLater: false,
   });
   for (const b of solids) b.on = !b.ch || b.ch === ch;
   G.player = {
@@ -320,7 +320,7 @@ function herdWolf(w, dt) {
 /* ---------------- being seen ---------------- */
 function detect(dt) {
   const p = G.player, moving = p.walk > 0.15 && !p.grazing, glassesOut = p.specsOn && !p.grazing;
-  let maxA = 0; G.seenBy = null; G.hiddenFrom = false; G.prayHidden = false;
+  let maxA = 0; G.seenBy = null; G.hiddenFrom = false; G.prayHidden = false; G.camHidden = false;
   for (const w of G.wolves) {
     if (!w.active) continue;
     w.sheepCd = Math.max(0, w.sheepCd - dt);
@@ -329,14 +329,16 @@ function detect(dt) {
     if (w.rest > 0) { w.rest -= dt; w.alert = 0; w.sees = false; continue; }
     if (w.distracted > 0) { w.alert = Math.max(0, w.alert - dt); w.sees = false; continue; }
     const sense = w.id === 'pastor' && G.church.mode === 'pray' ? 'pray' : w.sense || 'cone';
+    // studio cameras only see while ON AIR
+    if (sense === 'camera' && !studioLive()) { w.alert = Math.max(0, w.alert - dt); w.sees = false; maxA = Math.max(maxA, w.alert); continue; }
     let d;
     if (sense === 'sniff') { const dd = dist(w.x, w.y, p.x, p.y); d = dd <= w.range ? dd : -1; }
     else if (sense === 'pray') d = prayView(w, p);
     else d = inCone(w, p.x, p.y);
     w.sees = d >= 0;
-    const exposed = G.invuln <= 0 && (sense === 'beam' ? true : sense === 'sniff' ? moving : sense === 'pray' ? !p.grazing : glassesOut);
+    const exposed = G.invuln <= 0 && (sense === 'beam' ? true : sense === 'sniff' || sense === 'camera' ? moving : sense === 'pray' ? !p.grazing : glassesOut);
     if (w.sees && exposed) {
-      const base = sense === 'pray' ? 1.2 : sense === 'beam' ? 1.3 : sense === 'sniff' ? 1.35 : 0.55 + 1.2 * (1 - d / w.range);
+      const base = sense === 'pray' ? 1.2 : sense === 'beam' ? 1.3 : sense === 'sniff' ? 1.35 : sense === 'camera' ? 1.4 : 0.55 + 1.2 * (1 - d / w.range);
       const before = w.alert;
       w.alert = Math.min(1, w.alert + base * (1 + 0.15 * G.heat) * dt);
       if (before < 0.15 && w.alert >= 0.15) Snd.play(sense === 'sniff' ? 'sniff' : 'alertQ');
@@ -351,6 +353,7 @@ function detect(dt) {
         if (w.sheepCd <= 0) { w.sheepCd = 2.5; G.sheepish++; if (G.sheepish >= 10) unlock('sheepish'); }
       }
       if (w.sees && sense === 'sniff' && p.grazing) G.hiddenFrom = true;
+      if (w.sees && sense === 'camera') { G.hiddenFrom = true; G.camHidden = true; }
       if (w.sees && sense === 'pray' && p.grazing) {
         G.hiddenFrom = true; G.prayHidden = true;
         if (w.sheepCd <= 0) { w.sheepCd = 2.5; G.sheepish++; if (G.sheepish >= 10) unlock('sheepish'); }

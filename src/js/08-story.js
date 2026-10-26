@@ -24,6 +24,7 @@ function updateFleeceObjective() {
     return;
   }
   if (reg === 'church') { churchObjective(); return; }
+  if (reg === 'studio') { studioObjective(); return; }
   if (reg === 'field') {
     setObjective(G.proof.has('checks') ? 'You have the campaign checks.' : 'Find the campaign checks at Rom HQ.', G.view ? 'Two doors. Two signs. One field.' : 'The South Pasture is through the other door. Supposedly.');
     return;
@@ -174,9 +175,12 @@ function onEnterRegion(reg, dest) {
     toast(G.view ? 'Same Pasture' : north ? 'North Pasture' : 'South Pasture', G.view ? 'Which door did you use? Does it matter?' : north ? 'Home of the North Pasture sheep.' : 'Home of the South Pasture sheep.');
   } else if (reg === 'church') {
     enterChurch();
+  } else if (reg === 'studio') {
+    enterStudio();
   } else if (reg === 'farm') {
     if (!G.flags.visitedFarm) { G.flags.visitedFarm = true; banner(G.view ? 'Pig HQ' : 'The Farmhouse', G.view ? 'The Board is in session. Pigs notice anything that moves.' : 'It smells like a barn in here. A very expensive barn.', 3); }
   } else {
+    if (G.heatLater && reg === 'ranch') later(0.8, heatWarning);
     if (G.ch === 2) backFromRetirement();
     const g = G.sheep.find((q) => q.id === 'gerald');
     if (g && g.follow && g.state !== 'woke' && regionOf(g.x, g.y) === 'ranch') {
@@ -193,6 +197,7 @@ function talkTo(s) {
   let node;
   if (G.ch === 2 && !(s.sulk > 0)) { openDialog(ch2TalkNode(s)); return; }
   if (s.lure) node = { who: s, text: pick(LURE_TALK) };
+  else if (s.id === 'bellwether' && s.state !== 'woke' && studioLive()) node = { who: s, text: pick(ONAIR_TALK) };
   else if (s.sulk > 0) node = { who: s, text: pick(["Hmph. I'm not talking to you right now.", 'Hmph. Still thinking about what you said. Go away.', 'Hmph. Ask me later.']) };
   else if (s.kind === 'gerald') node = geraldNode(s);
   else if (s.kind === 'flock') node = flockNode(s);
@@ -296,8 +301,10 @@ function wakeSheep(s, counts) {
   Snd.play('wake');
   for (let i = 0; i < 14; i++) spawn({ type: 'star', x: s.x, y: s.y - 30, vx: rand(-120, 120), vy: rand(-160, -40), g: 260, life: 0.8, size: rand(3, 6) });
   if (s.id === 'ewenice' && G.ch === 1) later(0.5, eweniceLeaves);
+  if (s.id === 'bellwether' && G.ch === 1 && counts) later(0.4, () => bellwetherRings(s));
   if (!counts) return;
-  G.woke++; if (!again) G.wokePersonal++;
+  G.woke += (s.def && s.def.worth) || 1; // Bellwether counts twice: his viewers wake up with him
+  if (!again) G.wokePersonal++;
   G.playerDark = Math.min(0.72, G.woke * 0.24);
   syncHUD(); unlock('wool');
   if (G.phase !== 'fleecing') return;
@@ -305,7 +312,12 @@ function wakeSheep(s, counts) {
   G.heat = Math.max(G.heat, G.woke);
   queueLick();
   updateFleeceObjective();
-  if (G.flags['heat' + G.woke]) return; // each warning only once, even if a sugar lick knocked the count back down
+  if (regionOf(G.player.x, G.player.y) === 'studio') { G.heatLater = true; return; } // Bellwether's bell is enough news for one room; warn on the way out
+  heatWarning();
+}
+function heatWarning() {
+  G.heatLater = false;
+  if (G.phase !== 'fleecing' || G.flags['heat' + G.woke]) return; // each warning only once, even if a sugar lick knocked the count back down
   G.flags['heat' + G.woke] = true;
   const dog = G.wolves.find((w) => w.id === 'biscuit');
   if (G.woke === 1) toast('The wolves are nervous', 'Patrols are speeding up.');
@@ -323,7 +335,8 @@ function caught(w) {
   for (const o of G.wolves) o.alert = 0;
   G.player.caughtFx = 1.2;
   const docW = G.wolves.find((o) => o.id === 'doc');
-  openDialog({ who: w, text: CAUGHT_LINES[w.id] || 'Caught!', choices: [{ label: 'Uh oh', run: () => ({ who: docW, text: 'Calm Drops, twice daily. You will feel bright and happy in no time. Next!', choices: [{ label: 'Shake it off' }] }) }] });
+  const who = w.type === 'camera' ? G.wolves.find((o) => o.id === 'producer') || w : w; // a camera can't talk; its producer does
+  openDialog({ who, text: CAUGHT_LINES[w.id] || 'Caught!', choices: [{ label: 'Uh oh', run: () => ({ who: docW, text: 'Calm Drops, twice daily. You will feel bright and happy in no time. Next!', choices: [{ label: 'Shake it off' }] }) }] });
   G.afterDialog = afterCaught;
 }
 function afterCaught() {
@@ -346,6 +359,7 @@ function startHerd() {
   if (G.phase !== 'fleecing') return;
   if (G.wipe) { G.view = G.wipe.to; G.wipe = null; }
   clearLick(); G.lickDue = 0;
+  studioHerd();
   setPhase('herd');
   banner('Herd Mentality!', 'Awake sheep are waking their neighbors.', 3);
   ringChapelBell();

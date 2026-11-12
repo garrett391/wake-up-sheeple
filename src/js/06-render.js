@@ -48,7 +48,8 @@ function drawBeam(w) {
   if (w.alert > 0.04) { ctx.fillStyle = 'rgba(220,60,40,' + (w.alert * 0.4).toFixed(2) + ')'; ctx.fill(); }
   ctx.strokeStyle = tr ? 'rgba(255,255,255,0.7)' : 'rgba(255,200,60,0.8)'; ctx.lineWidth = 1.4; ctx.stroke();
   ctx.strokeStyle = 'rgba(' + base + ',0.35)'; ctx.lineWidth = 7; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(x + 16, y - 140); ctx.lineTo(x + Math.cos(w.dir) * 50, y + Math.sin(w.dir) * 50); ctx.stroke();
+  const fl = w.type === 'flood';
+  ctx.beginPath(); ctx.moveTo(x + (fl ? Math.cos(w.dir) * 6 : 16), y - (fl ? 122 : 140)); ctx.lineTo(x + Math.cos(w.dir) * 50, y + Math.sin(w.dir) * 50); ctx.stroke();
 }
 function drawSniff(w) {
   const tr = isTruthPass(), t = G.clock, col = tr ? '170,190,90' : '255,95,162';
@@ -182,7 +183,7 @@ function drawFX() {
   if (p.bubble) bubbleAt(p.x, p.y - 56, p.bubble.text);
   if (G.phase === 'fleecing') {
     for (const w of G.wolves) if (w.active && w.alert > 0.04) drawAlertMark(w.x, w.y - wolfTop(w, true), w.alert);
-    if (G.hiddenFrom && (isTruthPass() || G.prayHidden || G.camHidden || G.ch === 2) && !p.bubble) bubbleAt(p.x, p.y - 52, G.prayHidden ? 'Head bowed' : G.camHidden ? 'Holding still' : 'Hidden');
+    if (G.hiddenFrom && (isTruthPass() || G.prayHidden || G.camHidden || G.ch >= 2) && !p.bubble) bubbleAt(p.x, p.y - 52, G.prayHidden ? 'Head bowed' : G.camHidden ? 'Holding still' : 'Hidden');
   }
   for (const s of G.sheep) if (s.sulk > 0 && inVB(s.x, s.y) && !s.bubble) drawSulk(s.x + 24 * (s.facing || 1), s.y - 44 * (s.scale || 1));
   if (G.mode === 'play' && G.interact && !G.modal && !G.fade) {
@@ -240,16 +241,17 @@ function drawPost(t) {
 }
 const DL = [];
 function renderWorld(t) {
-  RT = t; RR = G.ch === 2 ? 1 - t : G.realT;
+  RT = t; RR = G.ch >= 2 ? 1 - t : G.realT;
   VB.x0 = cam.x - 90; VB.y0 = cam.y - 140; VB.x1 = cam.x + view.w / zoom + 90; VB.y1 = cam.y + view.h / zoom + 140;
   setWorldT();
   drawGround();
   drawRegionGrounds();
+  drawCh3Grounds();
   drawGlassesProp();
   drawCones();
   drawFeetRing();
   DL.length = 0;
-  for (const d of STATIC) if ((!d.ch || d.ch === G.ch) && d.x1 >= VB.x0 && d.x0 <= VB.x1 && d.y1 >= VB.y0 && d.y0 <= VB.y1) DL.push(d);
+  for (const d of STATIC) if (chIn(d.ch, G.ch) && d.x1 >= VB.x0 && d.x0 <= VB.x1 && d.y1 >= VB.y0 && d.y0 <= VB.y1) DL.push(d);
   if (G.lick && inVB(G.lick.x, G.lick.y)) DL.push({ y: G.lick.y, draw: drawLick });
   for (const s of G.sheep) if (inVB(s.x, s.y)) DL.push({ y: s.y, s });
   for (const w of G.wolves) if (w.active && inVB(w.x, w.y)) DL.push({ y: w.y, w });
@@ -262,8 +264,8 @@ function renderWorld(t) {
   drawPost(t);
 }
 // an arrow at the screen edge pointing at a spot in the ranch that is off screen
-function drawEdgeArrow(wx, wy, label, fill) {
-  if (regionOf(G.player.x, G.player.y) !== 'ranch') return;
+function drawEdgeArrow(wx, wy, label, fill, reg) {
+  if (regionOf(G.player.x, G.player.y) !== (reg || 'ranch')) return;
   const [gx, gy] = toScreen(wx, wy);
   const m = 48;
   if (gx > m && gx < view.w - m && gy > m + 70 && gy < view.h - m) return;
@@ -295,6 +297,7 @@ function screenOverlays() {
   if (G.mode === 'play' && G.phase === 'fleecing' && G.lick) drawEdgeArrow(G.lick.x, G.lick.y - 12, 'Sugar lick', '#FF8CC6');
   drawPrayerCaption();
   drawStudioCaption();
+  drawCh3Overlays();
 }
 function renderTitle() {
   renderWorld(0);

@@ -24,6 +24,7 @@ function talkToDog(w) {
   openDialog(dogNode(w));
 }
 function dogNode(w) {
+  if (w.ally && G.ch === 3) return { who: w, text: pick(DOG3_LINES) };
   if (w.ally && G.ch === 2) return { who: w, text: pick(DOG2_LINES) };
   if (w.ally) return { who: w, text: pick(["Sgt. Biscuit, reporting for the resistance! I'll keep the shepherds busy.", 'If a shepherd spots you, I bark. Squirrel trick. Works every time.', 'I walked them to the gate. Every one. Never again.']) };
   const ch = [{ label: 'Ask a question', run: () => ({ who: 'player', name: 'You', text: 'Where do the old sheep go?', choices: [{ label: 'Listen', run: () => {

@@ -4,7 +4,7 @@ const ui = {};
   't-talk', 't-specs', 't-baa', 't-graze', 'banner', 'banner-title', 'banner-sub', 'toasts', 'rhythm', 'rhythm-fill', 'rhythm-hint',
   'dialog', 'dlg-portrait', 'dlg-name', 'dlg-text', 'dlg-sr', 'dlg-choices', 'doc', 'doc-title', 'doc-body', 'doc-ok',
   'scr-title', 'scr-how', 'scr-pause', 'scr-end', 'btn-play', 'btn-how', 'btn-how-play', 'btn-how-back', 'btn-resume', 'btn-pause-menu',
-  'btn-again', 'btn-menu', 'btn-chapters', 'btn-end-next', 'scr-chapters', 'chapter-list', 'btn-chapters-back', 'woke-long', 'woke-short', 'end-kicker', 'end-title', 'end-text', 'end-stats', 'end-ach', 'ach-head', 'title-foot', 'how-controls', 'pause-controls',
+  'btn-again', 'btn-menu', 'btn-chapters', 'btn-end-next', 'scr-chapters', 'chapter-list', 'btn-chapters-back', 'woke-long', 'woke-short', 'end-kicker', 'end-title', 'end-text', 'end-post', 'end-stats', 'end-ach', 'ach-head', 'title-foot', 'how-controls', 'pause-controls',
 ].forEach((id) => { ui[id.replace(/-([a-z])/g, (m, c) => c.toUpperCase())] = document.getElementById(id); });
 
 const ICON = {
@@ -26,8 +26,8 @@ function syncHUD(force) {
   const prevCred = hudKey ? +hudKey.split('|')[0] : G.cred;
   hudKey = key;
   ui.pipCred.innerHTML = pips(3, G.cred, 'bell'); ui.pipCred.setAttribute('aria-label', 'Credibility ' + G.cred + ' of 3');
-  const meter = G.ch === 2 ? 'Pig-O-Meter' : 'Woke-O-Meter';
-  ui.wokeLong.textContent = meter; ui.wokeShort.textContent = G.ch === 2 ? 'Pigs' : 'Woke';
+  const meter = G.ch === 3 ? 'Eyewitnesses' : G.ch === 2 ? 'Pig-O-Meter' : 'Woke-O-Meter';
+  ui.wokeLong.textContent = meter; ui.wokeShort.textContent = G.ch === 3 ? 'Seen' : G.ch === 2 ? 'Pigs' : 'Woke';
   ui.pipWoke.innerHTML = pips(WOKE_GOAL, w, 'sheep'); ui.pipWoke.setAttribute('aria-label', meter + ' ' + w + ' of ' + WOKE_GOAL);
   ui.pipProof.innerHTML = pips(PROOF_COUNT, G.proof.size, 'doc'); ui.pipProof.setAttribute('aria-label', 'Proof ' + G.proof.size + ' of ' + PROOF_COUNT);
   if (prevCred > G.cred) { ui.pipCred.classList.remove('hit'); void ui.pipCred.offsetWidth; ui.pipCred.classList.add('hit'); }
@@ -100,7 +100,7 @@ let dlgTyping = false, dlgTimer = 0, dlgFull = '', dlgNode = null, dlgLeave = nu
 const pctx = ui.dlgPortrait.getContext('2d');
 function drawPortrait(node) {
   const prev = ctx, pRT = RT, pRR = RR;
-  ctx = pctx; RT = G.view; RR = G.ch === 2 ? 1 - G.view : G.realT;
+  ctx = pctx; RT = G.view; RR = G.ch >= 2 ? 1 - G.view : G.realT;
   pctx.setTransform(1, 0, 0, 1, 0, 0); pctx.clearRect(0, 0, 128, 128);
   const who = node.who;
   try {
@@ -112,9 +112,10 @@ function drawPortrait(node) {
       drawSheep(Object.assign({}, who, { x: 0, y: 0, facing: 1, walk: 0, grazing: false, hopT: 0, wakeFx: 0 }), false, { portrait: true });
     } else if (who && who.type) {
       const tower = who.type === 'tower', crow = who.type === 'crow', pigR = who.type === 'pig' && !(G.view === 1 || G.disguisesGone);
-      const k = who.type === 'dog' ? 3.4 : tower ? 3.2 : crow ? 3.6 : pigR ? 2.8 : 2.9;
-      const hx = who.type === 'dog' ? 15 : who.type === 'twohead' ? 0 : tower ? -10 : crow ? 6 : pigR ? 14 : 6;
-      const hy = who.type === 'dog' ? -25 : tower ? -144 : crow ? -60 : pigR ? -22 : -57;
+      const hound = who.type === 'hound', scare = who.type === 'scarecrow', sheepF = who.type === 'farmer' && (G.view === 1 || G.disguisesGone), manF = who.type === 'farmer' && !sheepF;
+      const k = who.type === 'dog' || hound ? 3.4 : tower ? 3.2 : crow ? 3.6 : pigR ? 2.8 : sheepF ? 2.6 : manF ? 2.5 : 2.9;
+      const hx = who.type === 'dog' ? 15 : hound ? 20 : who.type === 'twohead' || scare ? 0 : tower ? -10 : crow ? 6 : pigR ? 14 : sheepF ? 18 : manF ? 6 : 6;
+      const hy = who.type === 'dog' ? -25 : hound ? -22 : tower ? -144 : crow ? -60 : pigR ? -22 : scare ? -72 : sheepF ? -38 : manF ? -66 : -57;
       pctx.setTransform(k, 0, 0, k, 64 - hx * k, 70 - hy * k);
       drawWolf(Object.assign({}, who, { x: 0, y: 0, facing: 1, walk: 0, waving: false, limp: false, flying: false }), { portrait: true });
     } else {
@@ -286,12 +287,12 @@ function setPause(on) {
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !G.modal) setPause(true); });
 const fmtTime = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
-const achKeys = () => Object.keys(ACH).filter((id) => !ACH_CH2.has(id) || ch2Unlocked());
+const achKeys = () => Object.keys(ACH).filter((id) => (!ACH_CH2.has(id) || ch2Unlocked()) && (!ACH_CH3.has(id) || ch3Unlocked()));
 function refreshTitleFoot() {
   const s = store.get(), n = (s.ach || []).filter((id) => achKeys().indexOf(id) >= 0).length;
   let t = 'About 10 minutes a chapter. Sound on.';
   if (s.best) t += ' Your best: ' + fmtTime(s.best) + '.';
-  if (ch2Unlocked()) t += ' Chapter 2 unlocked.';
+  if (ch3Unlocked()) t += ' Chapter 3 unlocked.'; else if (ch2Unlocked()) t += ' Chapter 2 unlocked.';
   if (n) t += ' Achievements: ' + n + ' of ' + achKeys().length + '.';
   ui.titleFoot.textContent = t;
   refreshPlayButton();
@@ -324,11 +325,12 @@ function toTitle() {
 const CHAPTERS = [
   { n: 1, name: 'Greener Pastures', blurb: 'Find the glasses, prove the shepherds are wolves, and wake the flock.', best: 'best', start: () => restartChapter(1, false) },
   { n: 2, name: 'Hogwash', blurb: 'The wolves are back, wearing badges. Follow the strings to the Farmhouse.', best: 'best2', start: startChapter2 },
-  { n: 3, name: 'The Farmer', blurb: 'Up the hill, a light just came on in the Big House.' },
+  { n: 3, name: 'The Farmer', blurb: 'Up the hill, a light just came on in the Big House. Nobody has ever seen the Farmer.', best: 'best3', start: startChapter3 },
 ];
 function chapterOpen(c) {
   if (c.n === 1) return true;
   if (c.n === 2 && ch2Unlocked()) return true;
+  if (c.n === 3 && CH3_PARAM) return true;
   const prev = CHAPTERS.find((q) => q.n === c.n - 1);
   return !!(prev && prev.best && store.get()[prev.best]);
 }
@@ -380,16 +382,27 @@ const ENDINGS = {
   counted: ['Bad ending', 'Counted', 'You wake up in the meadow. Everything is bright and happy, and you feel uneasy for no reason. The glasses are still in the mud by the fence.'],
   hogwash: ['Chapter 2 complete', 'Hogwash', 'The pigs bolted out the back of the Farmhouse, still in their suits, and ran for the Big House up the hill. The strings lie slack across the farm, and the wolves are napping where they fell. The Chairman yelled one last thing over his shoulder: pigs never ran this farm. They just answer to the Farmer. Up the hill, a light comes on. To be continued.'],
   retired: ['Bad ending', 'Retired', "The Bureau's paperwork was flawless. The flock got a lovely card: 'Retired! Voluntarily!' Nobody listens to a sheep who retired. The pool at Sunny Acres is very warm."],
+  farmhand: ['Bad ending', 'Farmhand', 'The hounds carried you down the hill one time too many. The Farmer sent a lovely note, and a job: mending fences. You mend them very well. Up the hill, the light stays on.'],
+  nobody: ['True ending', "Nobody's Farm", "The Farmer was just a sheep who got tired of being asked what to do. The flock knocked down his fence, then the ranch fence, then the idea of a fence. Nobody runs the farm now. It's messy. Barbara and Doug argue about everything, out loud, to each other's faces. Nana has the heated pool. The grass is green because it's grass."],
+  shepherd: ['Dark ending', 'New Shepherd', 'You put on the hat. It fits. Down the hill the flock cheers, because the flock always cheers. Tomorrow you will build them a nicer fence, with a friendlier sign. The old ram hands you a box of little glasses, sheep-sized, and points at the east fence. Your shadow on the wall has pointy ears.'],
 };
+// after the credits: one more line on the end screen, after a beat
+const POSTCREDITS = {
+  win: 'The glasses lie in the mud where they fell. There is a tiny tag inside the frame: PROPERTY OF GREENER PASTURES RANCH. Somebody left them there on purpose.',
+  hogwash: 'Up the hill, in the Big House, somebody in a straw hat draws the curtains shut.',
+  nobody: "Weeks later, a lamb finds a pair of glasses in the mud by the east fence. He puts them on. Everything looks exactly the same. 'Huh,' says Lambert, and goes back to grazing.",
+  shepherd: 'Down by the east fence, you push a brand-new pair of glasses into the mud. Sheep-sized. A little smudged. Somebody restless will find them.',
+};
+let postTimer = 0;
 function endGame(kind) {
   if (G.lick) clearLick();
   G.mode = 'ending'; G.endKind = kind; G.modal = null;
   for (const el of [ui.hud, ui.touch, ui.rhythm, ui.banner, ui.dialog, ui.doc]) el.hidden = true;
   app.classList.remove('dlg-open');
-  const s = store.get(), win = kind === 'win' || kind === 'hogwash', bestKey = G.ch === 2 ? 'best2' : 'best';
+  const s = store.get(), win = kind === 'win' || kind === 'hogwash' || kind === 'nobody' || kind === 'shepherd', bestKey = G.ch === 3 ? 'best3' : G.ch === 2 ? 'best2' : 'best';
   let newBest = false;
   if (win) {
-    unlock(kind === 'win' ? 'pastures' : 'hogwash');
+    unlock(kind === 'win' ? 'pastures' : kind === 'hogwash' ? 'hogwash' : kind === 'nobody' ? 'nobody' : 'hat');
     const patch = {};
     if (!s[bestKey] || G.time < s[bestKey]) { patch[bestKey] = Math.round(G.time); newBest = true; }
     if (kind === 'win') patch.ch2 = true;
@@ -397,18 +410,23 @@ function endGame(kind) {
   } else {
     G.view = 0; G.wipe = null; G.player.specsOn = false; setUIMode(offMode()); Snd.setMode(offMode());
     const p = G.player;
-    if (kind === 'retired') { p.x = 2220; p.y = 784; } else { p.x = 600; p.y = 900; }
+    if (kind === 'retired') { p.x = 2220; p.y = 784; } else if (kind === 'farmhand') { p.x = 1180; p.y = 900; } else { p.x = 600; p.y = 900; }
     p.vx = p.vy = 0;
     for (const w of G.wolves) w.alert = 0;
     G.camTarget = null; G.woozy = 0; updateCamera(0, true);
   }
   const E = ENDINGS[kind] || ENDINGS.counted;
   ui.endKicker.textContent = E[0]; ui.endTitle.textContent = E[1]; ui.endText.textContent = E[2];
-  const meter = G.ch === 2 ? 'Convinced' : 'Woke';
+  clearTimeout(postTimer); ui.endPost.classList.remove('show'); ui.endPost.hidden = !POSTCREDITS[kind];
+  if (POSTCREDITS[kind]) {
+    ui.endPost.innerHTML = ''; const b = document.createElement('b'); b.textContent = 'After the credits'; ui.endPost.append(b, document.createTextNode(POSTCREDITS[kind]));
+    postTimer = setTimeout(() => ui.endPost.classList.add('show'), RM ? 0 : 1800);
+  }
+  const meter = G.ch === 3 ? 'Eyewitnesses' : G.ch === 2 ? 'Convinced' : 'Woke';
   const stats = kind === 'win'
     ? [['Time', fmtTime(G.time), newBest ? 'Your best yet' : ''], ['Credibility', G.cred + ' of 3'], ['Proof', G.proof.size + ' of ' + PROOF_COUNT], ['You woke', String(G.wokePersonal)]]
-    : kind === 'hogwash'
-      ? [['Time', fmtTime(G.time), newBest ? 'Your best yet' : ''], ['Credibility', G.cred + ' of 3'], ['Proof', G.proof.size + ' of ' + PROOF_COUNT], ['Convinced', String(G.wokePersonal)]]
+    : kind === 'hogwash' || kind === 'nobody' || kind === 'shepherd'
+      ? [['Time', fmtTime(G.time), newBest ? 'Your best yet' : ''], ['Credibility', G.cred + ' of 3'], [G.ch === 3 ? 'Windows' : 'Proof', G.proof.size + ' of ' + PROOF_COUNT], [meter, String(G.wokePersonal)]]
       : [['Time', fmtTime(G.time)], ['Proof', G.proof.size + ' of ' + PROOF_COUNT], [meter, Math.min(WOKE_GOAL, G.woke) + ' of ' + WOKE_GOAL]];
   ui.endStats.innerHTML = ''; ui.endStats.className = 'stats-list n' + stats.length;
   for (const [a, b, c] of stats) { const d = document.createElement('div'); const dt = document.createElement('dt'); dt.textContent = a; const dd = document.createElement('dd'); dd.textContent = b; d.append(dt, dd); if (c) { const sm = document.createElement('small'); sm.textContent = c; d.appendChild(sm); } ui.endStats.appendChild(d); }
@@ -435,6 +453,7 @@ function restartChapter(ch, retry) {
   newGame({ ch, retry });
   startPlay();
   if (ch === 2) later(0.4, openCh2Intro);
+  if (ch === 3) later(0.4, openCh3Intro);
 }
 ui.btnPlay.addEventListener('click', () => { Snd.init(); playNext(); });
 ui.btnHow.addEventListener('click', () => { Snd.init(); fillControls(ui.howControls); ui.scrHow.hidden = false; ui.btnHowPlay.focus({ preventScroll: true }); });

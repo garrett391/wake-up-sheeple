@@ -59,7 +59,7 @@ function lickPathClear(x0, y0, x1, y1) {
 // true if a sign, building or tree drawn after the lick would cover it
 function lickHidden(x, y) {
   for (const d of STATIC) {
-    if (d.ch && d.ch !== G.ch) continue;
+    if (!chIn(d.ch, G.ch)) continue;
     if (d.y > y && d.x0 < x + 46 && d.x1 > x - 20 && d.y0 < y + 4 && d.y1 > y - 52) return true;
   }
   return false;

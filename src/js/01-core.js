@@ -162,9 +162,11 @@ function textOutlined(txt, x, y, size, font, fill, stroke, weight) {
   ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, size * 0.28); ctx.strokeStyle = stroke; ctx.strokeText(txt, x, y);
   ctx.fillStyle = fill; ctx.fillText(txt, x, y);
 }
+// a thing that exists in some chapters only carries .ch: one chapter number, or a list of them
+const chIn = (c, ch) => !c || c === ch || (Array.isArray(c) && c.indexOf(ch) >= 0);
 function signText(candy, truth, x, y, size, maxW, colorKey) {
   let tr = RT > 0.5 || RR > 0.5;
-  if (G.ch === 2) { const o = CH2_SIGNS[candy]; if (o) { candy = o[0]; truth = o[1]; } tr = RT > 0.5; }
+  if (G.ch >= 2) { const o = (G.ch === 3 && CH3_SIGNS[candy]) || CH2_SIGNS[candy]; if (o) { candy = o[0]; truth = o[1]; } tr = RT > 0.5; }
   text(tr ? truth : candy, x, y, tr ? size * 0.95 : size, tr ? F_TRUTH : F_CANDY, P(colorKey || 'ink'), maxW);
 }
 if (document.fonts) {

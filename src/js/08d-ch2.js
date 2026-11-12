@@ -1,7 +1,7 @@
 /* ---------------- Chapter 2: story and systems ---------------- */
 const CH2_PARAM = /[?&]chapter=2\b/.test(location.search);
-function ch2Unlocked() { const s = store.get(); return !!(s.ch2 || s.best) || CH2_PARAM; }
-function offMode() { return G.ch === CH2 ? 'real' : 'candy'; }
+function ch2Unlocked() { const s = store.get(); return !!(s.ch2 || s.best) || CH2_PARAM || CH3_PARAM; }
+function offMode() { return G.ch >= 2 ? 'real' : 'candy'; }
 function say2(e, real, truth, dur) { e.bubble = { text: real, alt: truth, t: dur || 2 }; }
 const bubbleText = (b) => (b.alt && (isTruthPass() || G.disguisesGone) ? b.alt : b.text);
 function wolfTop(w, mark) {
@@ -9,6 +9,10 @@ function wolfTop(w, mark) {
   if (w.type === 'camera') return mark ? 52 : 44;
   if (w.type === 'pastor') return mark ? 124 : 112;
   if (w.type === 'crow') return mark ? 82 : 74;
+  if (w.type === 'hound') return mark ? 56 : 48;
+  if (w.type === 'scarecrow') return mark ? 110 : 100;
+  if (w.type === 'flood') return mark ? 158 : 148;
+  if (w.type === 'farmer') return ch3Truth() ? (mark ? 84 : 76) : mark ? 106 : 98;
   if (w.type === 'pig') { const tr = ch2Truth(), k = w.role === 'chairman' ? 1.12 : 1; return (tr ? (mark ? 100 : 92) : mark ? 60 : 52) * k; }
   return mark ? 100 : 92;
 }

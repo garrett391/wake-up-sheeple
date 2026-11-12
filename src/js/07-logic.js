@@ -19,9 +19,9 @@ function makeWolf(d) {
 }
 function newGame(opts) {
   opts = opts || {};
-  const ch = opts.ch === 2 ? 2 : 1;
+  const ch = opts.ch === 2 || opts.ch === 3 ? opts.ch : 1;
   Object.assign(G, {
-    ch, phase: ch === 2 ? 'glasses' : 'meadow', modal: null, time: 0, view: 0, wipe: null, realT: 0,
+    ch, phase: ch >= 2 ? 'glasses' : 'meadow', modal: null, time: 0, view: 0, wipe: null, realT: 0,
     proof: new Set(), woke: 0, wokePersonal: 0, cred: 3, heat: 0, sheepish: 0, ach: new Set(),
     flags: { retry: !!opts.retry }, timers: [], particles: [], pops: [], cut: null, camTarget: null,
     maxAlert: 0, invuln: 0, woozy: 0, playerDark: 0, rh: null, st: 0, fenceT: 0, disguisesGone: false, shock: null,
@@ -29,21 +29,22 @@ function newGame(opts) {
     seenBy: null, hiddenFrom: false, prayHidden: false, church: newChurch(), followCount: 0, endKind: null, interact: null, fade: null, noise: null,
     lick: null, lickDue: 0, lickCd: 0, licksKicked: 0, licksDropped: 0, lickCut: null, studio: newStudio(), camHidden: false, heatLater: false,
   });
-  for (const b of solids) b.on = !b.ch || b.ch === ch;
+  for (const b of solids) b.on = chIn(b.ch, ch);
   G.player = {
     id: 'you', name: 'You', kind: 'player', state: 'woke', x: opts.retry ? 1150 : 600, y: opts.retry ? 800 : 965, vx: 0, vy: 0,
     facing: 1, phase: 0, walk: 0, grazing: false, specsOn: false, hasSpecs: false, bubble: null, scale: 1, hopT: 0, caughtFx: 0,
   };
   G.sheep = SHEEP_DEFS.map(makeSheep);
-  G.wolves = WOLF_DEFS.filter((d) => !d.ch || d.ch === ch).map(makeWolf);
-  G.proofs = (ch === 2 ? PROOF_DEFS2 : PROOF_DEFS).map((p) => Object.assign({}, p, { found: false, ph: Math.random() * 6 }));
+  G.wolves = WOLF_DEFS.filter((d) => chIn(d.ch, ch)).map(makeWolf);
+  G.proofs = (ch === 3 ? [] : ch === 2 ? PROOF_DEFS2 : PROOF_DEFS).map((p) => Object.assign({}, p, { found: false, ph: Math.random() * 6 }));
   G.glasses = { taken: false };
   const last = BFLY_PATH[BFLY_PATH.length - 1];
   G.bfly = opts.retry ? { x: last[0], y: last[1], i: BFLY_PATH.length - 1, gone: false, away: 0 } : { x: 650, y: 935, i: 0, gone: false, away: 0 };
-  WOKE_GOAL = ch === 2 ? 3 : 4; PROOF_COUNT = G.proofs.length;
+  WOKE_GOAL = ch >= 2 ? 3 : 4; PROOF_COUNT = ch === 3 ? WINDOWS3.length : G.proofs.length;
   if (ch === 2) setupCh2();
+  if (ch === 3) setupCh3();
   hudKey = '';
-  setUIMode(ch === 2 ? 'real' : 'candy');
+  setUIMode(ch >= 2 ? 'real' : 'candy');
 }
 
 /* ---------------- physics and sight ---------------- */
@@ -116,7 +117,7 @@ function pop(x, y, txt, good) { G.pops.push({ x, y, txt, good, t: 0.9 }); }
 
 /* ---------------- sheep ---------------- */
 function pickWander(s) {
-  const free = G.realT > 0.5 && G.ch !== 2;
+  const free = G.realT > 0.5 && G.ch === 1;
   for (let k = 0; k < 8; k++) {
     const a = Math.random() * TAU, r = Math.random() * s.wander;
     const x = s.hx + Math.cos(a) * r, y = s.hy + Math.sin(a) * r * 0.7;
@@ -202,7 +203,7 @@ function updatePlayer(dt) {
   p.grazing = canMove && G.phase !== 'herd' && (keys.has('shift') || touchState.graze);
   if (p.grazing) { ix = 0; iy = 0; }
   let speed = 175;
-  if (G.phase === 'stampede' && G.ch !== 2 && G.st > 1.4) {
+  if (G.phase === 'stampede' && G.ch === 1 && G.st > 1.4) {
     const dx = GATEX - p.x, dy = 1190 - p.y, d = Math.hypot(dx, dy);
     if (d > 6) { ix = dx / d; iy = dy / d; speed = 205; }
   }
@@ -239,7 +240,7 @@ function updateWolves(dt) {
     if (G.phase === 'fleecing' && w.alert > 0.35 && (w.sense || 'cone') !== 'sniff') {
       const a = Math.atan2(p.y - w.y, p.x - w.x);
       if (w.type === 'twohead') { const d1 = Math.abs(angDiff(w.dir, a)), d2 = Math.abs(angDiff(w.dir + Math.PI, a)); turnToward(w, d1 <= d2 ? a : a - Math.PI, 3 * dt); }
-      else turnToward(w, a, (w.type === 'tower' ? 1.2 : 3.2) * dt);
+      else turnToward(w, a, (w.type === 'tower' || w.type === 'flood' ? 1.2 : 3.2) * dt);
       w.walk = 0; if (w.type !== 'twohead' && w.type !== 'tower') setFacing(w); continue;
     }
     if (w.id === 'pastor' && G.church.mode !== 'sermon') { turnToward(w, Math.PI / 2, 2.5 * dt); w.walk = 0; continue; }
@@ -345,7 +346,7 @@ function detect(dt) {
       if (before < 0.7 && w.alert >= 0.7) { Snd.play('alertX'); makeNoise(p.x, p.y); }
       if (w.id === 'biscuit' && before < 0.5 && w.alert >= 0.5) biscuitBark(w);
       G.seenBy = w;
-      if (w.alert >= 1) { if (w.type === 'crow') { crowReport(w); continue; } if (w.type === 'pig') { retire(w); return; } caught(w); return; }
+      if (w.alert >= 1) { if (G.ch === 3) { caught3(w); return; } if (w.type === 'crow') { crowReport(w); continue; } if (w.type === 'pig') { retire(w); return; } caught(w); return; }
     } else {
       w.alert = Math.max(0, w.alert - 0.42 * dt);
       if (w.sees && sense === 'cone' && p.specsOn && p.grazing) {

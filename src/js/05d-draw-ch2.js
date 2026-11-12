@@ -295,4 +295,4 @@ for (const d of [
   addStatic(GUARD_DESK.y1, GUARD_DESK.x0 - 4, GUARD_DESK.y0 - 50, GUARD_DESK.x1 + 4, GUARD_DESK.y1 + 20, drawGuardDesk),
 ]) d.ch = CH2;
 // trees that stood where the Farmhouse and the protest go
-for (const d of STATIC) if (d.treeAt && ((d.treeAt[0] === 1300 && d.treeAt[1] === 300) || (d.treeAt[0] === 1420 && d.treeAt[1] === 232) || (d.treeAt[0] === 1430 && d.treeAt[1] === 520))) d.ch = 1;
+for (const d of STATIC) if (d.treeAt && ((d.treeAt[0] === 1300 && d.treeAt[1] === 300) || (d.treeAt[0] === 1420 && d.treeAt[1] === 232) || (d.treeAt[0] === 1430 && d.treeAt[1] === 520))) d.ch = [1, 3];

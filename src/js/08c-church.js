@@ -26,7 +26,7 @@ function updateChurch(dt) {
   for (const s of G.sheep) {
     if (s.home !== 'church' || s.run || s.follow || s.panic > 0) continue;
     if (s.walk < 0.15) s.facing = s.id === 'ewenice' ? -1 : s.x < NAVE.aisle ? 1 : -1;
-    if (s.state === 'asleep' || (G.ch === 2 && s.home === 'church')) { s.grazing = praying; s.grazeIdle = praying; }
+    if (s.state === 'asleep' || (G.ch >= 2 && s.home === 'church')) { s.grazing = praying; s.grazeIdle = praying; }
   }
   for (const s of G.sheep) if (s.leaving && s.y > 2200 && Math.abs(s.x - NAVE.aisle) < 70) exitChurch(s, true);
   const inside = regionOf(p.x, p.y) === 'church';
@@ -45,16 +45,22 @@ function updateChurch(dt) {
       if (!C.prayers && G.phase === 'fleecing') banner('Every head bowed!', (touchMode ? 'Hold Bow' : 'Hold Shift') + ' to bow your head until the pastor says "Amen."', 3.2);
     }
   } else if (C.mode === 'warn') {
-    if (C.t >= C.warn) { C.mode = 'pray'; C.t = 0; C.prayers++; if (pastor) say(pastor, 'Every head bowed. Every eye closed.', 3.4); }
+    if (C.t >= C.warn) { C.mode = 'pray'; C.t = 0; C.prayers++; C.fleece = !p.specsOn; if (pastor) say(pastor, 'Every head bowed. Every eye closed.', 3.4); }
   } else {
+    if (p.specsOn) C.fleece = false;
     C.tuftT -= dt;
     if (C.tuftT <= 0 && usher) {
       C.tuftT = 0.3;
-      const s = pick(G.sheep.filter((q) => q.home === 'church' && (q.state === 'asleep' || G.ch === 2) && q.grazing && dist(q.x, q.y, usher.x, usher.y) < 520));
+      // with the glasses off you never see your own wool go into the plate
+      if (C.fleece && p.grazing && Math.random() < 0.5) spawn({ type: 'wool', mode: 'truth', x: p.x + rand(-8, 8), y: p.y - 30, vx: (usher.x + 6 - p.x) / 1.1, vy: (usher.y - 36 - p.y + 30) / 1.1, life: 1.1, size: rand(2.6, 4.2) });
+      const s = pick(G.sheep.filter((q) => q.home === 'church' && (q.state === 'asleep' || G.ch >= 2) && q.grazing && dist(q.x, q.y, usher.x, usher.y) < 520));
       if (s) spawn({ type: 'wool', mode: 'truth', x: s.x + rand(-8, 8), y: s.y - 30, vx: (usher.x + 6 - s.x) / 1.1, vy: (usher.y - 36 - s.y + 30) / 1.1, life: 1.1, size: rand(2.6, 4.2) });
     }
     if (usher && !usher.bubble && C.t > 0.8 && Math.random() < dt * 0.5) say(usher, pick(PLATE_LINES), 1.8);
-    if (C.t >= 4.6) { C.mode = 'sermon'; C.t = 0; C.len = rand(9, 12); C.talkT = 1.6; if (pastor) say(pastor, 'Amen!', 1.4); Snd.play('amen'); }
+    if (C.t >= 4.6) {
+      C.mode = 'sermon'; C.t = 0; C.len = rand(9, 12); C.talkT = 1.6; if (pastor) say(pastor, 'Amen!', 1.4); Snd.play('amen');
+      if (C.fleece && G.phase === 'fleecing') { C.fleece = false; unlock('fleeced'); later(1.2, () => toast('Your fleece feels a little lighter', 'Funny. You never saw the plate.')); }
+    }
   }
 }
 function enterChurch() {

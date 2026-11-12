@@ -8,6 +8,7 @@ A satirical stealth-persuasion game for the browser. You're a sheep who finds a 
 
 - **Chapter 1: Greener Pastures.** Sneak around the ranch, Sunny Acres, the North and South Pasture, the chapel, and the Bleat, Bellwether's TV studio, where the cameras catch anything that moves while ON AIR. Find the proof each sheep cares about, wake 4 of them, and lead the stampede with a Big Baa. Watch out for Granny's free sugar licks: kick them over before your friends eat one and fall back asleep.
 - **Chapter 2: Hogwash.** It unlocks once you beat Chapter 1; pick it from Chapters on the title screen. The wolves are back as "reformed" Farm Security, and through the glasses they have strings. The strings lead to the Farmhouse, where the pigs live. Your friends need two pieces of proof each, and the crows report you to the Bureau.
+- **Chapter 3: The Farmer.** It unlocks once you beat Chapter 2. The pigs answer to the Farmer in the Big House up the hill, and nobody has ever seen him. Your friends won't take proof this time: lead each one up the hill, past the hounds, scarecrows and searchlight, to see through a window of the Big House with their own eyes. Then meet the Farmer, and decide what to do with his hat.
 
 ## Controls
 
@@ -38,11 +39,12 @@ pip install playwright && playwright install chromium
 python3 build.py
 python3 test/smoke.py     # Chapter 1 start to finish, desktop and phone
 python3 test/ch2.py       # Chapter 2 start to finish
+python3 test/ch3.py all   # Chapter 3 start to finish, both endings, desktop and phone
 ```
 
 Screenshots land in `shots/`, which is not committed.
 
-URL options: `?chapter=2` unlocks Chapter 2 without beating Chapter 1; `?debug` adds a `window.__wus` test API.
+URL options: `?chapter=2` (or `?chapter=3`) unlocks that chapter without beating the ones before it; `?debug` adds a `window.__wus` test API.
 
 ## Layout
 

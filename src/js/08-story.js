@@ -5,17 +5,18 @@ function setPhase(p) {
   if (p === 'meadow') {
     if (G.flags.retry) setObjective('The glasses are still in the mud by the fence.', 'Squeeze through the hole in the east fence.');
     else setObjective('Morning at Greener Pastures! Follow the butterfly east.', moveHint());
-  } else if (p === 'glasses') setObjective(G.ch === 2 ? 'Something is off. Put the glasses back on.' : 'Put on the glasses.', touchMode ? 'Tap Glasses.' : 'Press Space.');
+  } else if (p === 'glasses') setObjective(G.ch >= 2 ? 'Something is off. Put the glasses back on.' : 'Put on the glasses.', touchMode ? 'Tap Glasses.' : 'Press Space.');
   else if (p === 'reveal') setObjective('Act natural.', '');
   else if (p === 'fleecing') updateFleeceObjective();
   else if (p === 'herd') setObjective('Herd Mentality!', 'The flock is waking up.');
   else if (p === 'bigbaa') setObjective('Big Baa!', touchMode ? 'Tap Baa when the ring closes.' : 'Press B when the ring closes.');
-  else if (p === 'stampede') setObjective(G.ch === 2 ? 'Run them off!' : 'Stampede!', '');
+  else if (p === 'stampede') setObjective(G.ch === 3 ? 'Let them see.' : G.ch === 2 ? 'Run them off!' : 'Stampede!', '');
   updateTouchButtons();
 }
 function updateFleeceObjective() {
   if (G.phase !== 'fleecing') return;
   if (G.ch === 2) { ch2Objective(); return; }
+  if (G.ch === 3) { ch3Objective(); return; }
   const reg = regionOf(G.player.x, G.player.y), g = G.sheep.find((q) => q.id === 'gerald');
   if (reg === 'acres') {
     if (g && g.follow && g.state !== 'woke') { setObjective("Get Gerald out through Kevin's tunnel.", 'The tunnel is in the northwest corner. Stay out of the light.'); return; }
@@ -55,7 +56,7 @@ function updateWipe(dt) {
   const w = G.wipe;
   if (!w) return;
   w.t += dt / w.dur;
-  if (!w.half && w.t >= 0.5) { w.half = true; if (G.ch === 2 || G.realT < 0.5) setUIMode(w.to ? 'truth' : offMode()); }
+  if (!w.half && w.t >= 0.5) { w.half = true; if (G.ch >= 2 || G.realT < 0.5) setUIMode(w.to ? 'truth' : offMode()); }
   if (w.t >= 1) { G.view = w.to; G.wipe = null; }
 }
 function pickupGlasses() {
@@ -71,7 +72,7 @@ function updateCut(dt) {
   const wg = G.wolves[0];
   if (c.stage === 'wipe') { if (!G.wipe && c.t > 0.8) { c.stage = 'pan'; c.t = 0; G.camTarget = { x: wg.x, y: wg.y - 40 }; } }
   else if (c.stage === 'pan') { if (c.t > 1.5) { c.stage = 'talk'; openRevealDialog(); } }
-  else if (c.stage === 'pan2') { if (c.t > 1.7) { c.stage = 'talk2'; openRevealDialog2b(); } }
+  else if (c.stage === 'pan2') { if (c.t > 1.7) { c.stage = 'talk2'; if (G.ch === 3) openRevealDialog3b(); else openRevealDialog2b(); } }
   else if (c.stage === 'back') {
     G.camTarget = null;
     if (c.t > 1.0) {
@@ -82,6 +83,7 @@ function updateCut(dt) {
 }
 function openRevealDialog() {
   if (G.ch === 2) { openRevealDialog2(); return; }
+  if (G.ch === 3) { openRevealDialog3(); return; }
   const sys = 'Through the glasses';
   openDialog({ who: 'system', name: sys, text: 'The shepherd waving from the hill is a wolf in a straw hat.', choices: [{ label: 'Continue', run: () => ({
     who: 'system', name: sys, text: "He's waving at you. Wave back. Act natural.", choices: [{ label: 'Wave back', run: () => {
@@ -132,7 +134,7 @@ function findInteract() {
   }
   if (G.phase === 'meadow' || G.phase === 'fleecing' || (G.phase === 'herd' && reg !== 'ranch')) {
     for (const pt of PORTALS) {
-      if (pt.region !== reg || (pt.ch && pt.ch !== G.ch) || (pt.truthOnly && !(p.specsOn && G.view === 1))) continue;
+      if (pt.region !== reg || !chIn(pt.ch, G.ch) || (pt.truthOnly && !(p.specsOn && G.view === 1))) continue;
       const d = dist(p.x, p.y, pt.x, pt.y);
       if (d < pt.r && d - 12 < bd) { bd = d - 12; best = { kind: 'portal', ref: pt, x: pt.x, y: pt.y - 44, label: G.view && pt.labelTruth ? pt.labelTruth : pt.label }; }
     }
@@ -141,10 +143,13 @@ function findInteract() {
   if (lk) best = lk;
   const rk = rackInteract();
   if (rk) best = rk;
+  const c3 = ch3Interact(best);
+  if (c3) best = c3;
   return best;
 }
 function doInteract(it) {
   if (it.kind === 'rack') { chewRack(); return; }
+  if (it.kind === 'window' || it.kind === 'farmer') { ch3Use(it); return; }
   if (it.kind === 'lick') { kickLick(); return; }
   if (it.kind === 'portal') usePortal(it.ref);
   else if (it.kind === 'dog') talkToDog(it.ref);
@@ -153,6 +158,7 @@ function doInteract(it) {
 function usePortal(pt) {
   const dest = PORTALS.find((q) => q.id === pt.to);
   if (!dest || G.fade) return;
+  if (pt.locked && pt.locked()) { lockedDoor(pt); return; }
   Snd.play(pt.id.indexOf('tunnel') === 0 ? 'dig' : 'door');
   G.fade = { t: 0, dur: 0.8, fired: false, mid: () => doTeleport(dest) };
 }
@@ -177,6 +183,8 @@ function onEnterRegion(reg, dest) {
     enterChurch();
   } else if (reg === 'studio') {
     enterStudio();
+  } else if (reg === 'hill' || reg === 'house') {
+    enterRegion3(reg);
   } else if (reg === 'farm') {
     if (!G.flags.visitedFarm) { G.flags.visitedFarm = true; banner(G.view ? 'Pig HQ' : 'The Farmhouse', G.view ? 'The Board is in session. Pigs notice anything that moves.' : 'It smells like a barn in here. A very expensive barn.', 3); }
   } else {
@@ -196,6 +204,7 @@ function talkTo(s) {
   s.facing = G.player.x > s.x ? 1 : -1; s.grazing = false; s.idle = Math.max(s.idle, 2);
   let node;
   if (G.ch === 2 && !(s.sulk > 0)) { openDialog(ch2TalkNode(s)); return; }
+  if (G.ch === 3) { openDialog(ch3TalkNode(s)); return; }
   if (s.lure) node = { who: s, text: pick(LURE_TALK) };
   else if (s.id === 'bellwether' && s.state !== 'woke' && studioLive()) node = { who: s, text: pick(ONAIR_TALK) };
   else if (s.sulk > 0) node = { who: s, text: pick(["Hmph. I'm not talking to you right now.", 'Hmph. Still thinking about what you said. Go away.', 'Hmph. Ask me later.']) };
@@ -292,7 +301,7 @@ function loseCred(msg) {
   G.cred = Math.max(0, G.cred - 1);
   Snd.play('bonk'); addShake(7); syncHUD();
   toast('Credibility -1', msg);
-  if (G.cred <= 0) G.pendingEnd = G.ch === 2 ? 'retired' : 'counted';
+  if (G.cred <= 0) G.pendingEnd = G.ch === 3 ? 'farmhand' : G.ch === 2 ? 'retired' : 'counted';
 }
 function wakeSheep(s, counts) {
   if (s.state === 'woke') return;
@@ -388,7 +397,7 @@ function startBigBaa() {
   G.rh = { t: 0, start: 1.8, iv: 0.6, last: -1, hit: -99, vol: 0, done: false };
   ui.rhythm.hidden = false; ui.rhythmFill.style.width = '0%';
   ui.rhythmHint.textContent = touchMode ? 'Tap Baa when the ring closes' : 'Press B or Space when the ring closes';
-  banner('Big Baa!', (G.ch === 2 ? 'Drown out the Chairman. ' : '') + (touchMode ? 'Tap Baa on the beat.' : 'Press B on the beat.'), 2.2);
+  banner('Big Baa!', (G.ch === 3 ? 'Blow his hat off. ' : G.ch === 2 ? 'Drown out the Chairman. ' : '') + (touchMode ? 'Tap Baa on the beat.' : 'Press B on the beat.'), 2.2);
   Snd.setMode('quiet');
   G.player.vx = G.player.vy = 0;
 }
@@ -421,6 +430,7 @@ function rhythmPress() {
 }
 function startStampede() {
   if (G.ch === 2) { startPigRout(); return; }
+  if (G.ch === 3) { startFarmerReveal(); return; }
   setPhase('stampede');
   G.st = 0; ui.rhythm.hidden = true;
   G.disguisesGone = true; G.flash = 0.9; G.flashColor = '255,255,255'; addShake(16);
@@ -438,6 +448,7 @@ function startStampede() {
 }
 function updateStampede(dt) {
   if (G.ch === 2) { updatePigRout(dt); return; }
+  if (G.ch === 3) { updateFarmerReveal(dt); return; }
   const st = (G.st += dt);
   if (G.shock) { G.shock.t += dt; if (G.shock.t > 1.3) G.shock = null; }
   for (const w of G.wolves) {

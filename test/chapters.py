@@ -1,9 +1,10 @@
 """The Chapters screen.
 A: a new player: Play starts Chapter 1; Chapters lists 1 open, 2 and 3 locked with no names (no spoilers).
 B: after finishing Chapter 1: Chapter 2 opens and shows its name; Chapter 3 stays locked; Esc and Back close the list.
-C: after finishing Chapter 2: Chapter 3 shows as "Coming soon" and can't be started.
-Play picks up where you left off: Chapter 1 for a new player, Chapter 2 once Chapter 1 is finished, Chapter 1 again once everything is.
-D: the end screen's next-chapter button and a phone-sized screenshot."""
+C: after finishing Chapter 2: Chapter 3 opens with its name, and Play continues with it.
+E: after finishing Chapter 3: every chapter shows its best time, and Play goes back to Chapter 1.
+Play picks up where you left off: Chapter 1 for a new player, then 2, then 3, then Chapter 1 again once everything is finished.
+D: the end screen's next-chapter button (1 -> 2, 2 -> 3, none after 3) and a phone-sized screenshot."""
 import pathlib
 from playwright.sync_api import sync_playwright
 
@@ -22,6 +23,11 @@ def page(b, w=1280, h=800, touch=False, store=None):
         pg.evaluate(f"localStorage.setItem('wake-up-sheeple', JSON.stringify({store}))"); pg.reload()
     pg.wait_for_timeout(600)
     return pg
+
+def close_dialogs(pg):
+    for _ in range(6):
+        if pg.evaluate("__wus.G.modal") != "dialog": return
+        pg.evaluate("__wus.choose(0)"); pg.wait_for_timeout(150)
 
 def cards(pg):
     return pg.evaluate("""Array.from(document.querySelectorAll('#chapter-list .chapter')).map((b) => ({
@@ -69,16 +75,29 @@ with sync_playwright() as p:
 
     # C: Chapter 2 finished
     pg = page(b, store='{"ch2": true, "best": 252, "best2": 431}')
+    checks["play_label_ch3"] = pg.text_content("#btn-play") == "PlayChapter 3: The Farmer"
+    pg.keyboard.press("Enter"); pg.wait_for_timeout(500)
+    checks["enter_plays_ch3"] = pg.evaluate("__wus.G.ch") == 3 and pg.evaluate("__wus.G.mode") == "play"
+    pg.reload(); pg.wait_for_timeout(600)
+    pg.click("#btn-chapters"); pg.wait_for_timeout(300)
+    c = cards(pg); print("C:", c)
+    checks["ch3_open"] = c[2]["name"] == "The Farmer" and c[2]["status"] == "Not finished yet" and c[2]["enabled"] and c[1]["status"] == "Finished. Best time 7:11"
+    pg.click('.chapter[data-ch="3"]'); pg.wait_for_timeout(800)
+    checks["starts_ch3"] = pg.evaluate("__wus.G.ch") == 3 and pg.is_hidden("#scr-chapters")
+    pg.close()
+
+    # E: everything finished
+    pg = page(b, store='{"ch2": true, "best": 252, "best2": 431, "best3": 512}')
     checks["play_label_done"] = pg.text_content("#btn-play") == "Play"
     pg.keyboard.press("Enter"); pg.wait_for_timeout(500)
     checks["enter_plays_ch1"] = pg.evaluate("__wus.G.ch") == 1 and pg.evaluate("__wus.G.mode") == "play"
     pg.reload(); pg.wait_for_timeout(600)
     pg.click("#btn-chapters"); pg.wait_for_timeout(300)
-    c = cards(pg); print("C:", c)
-    checks["ch3_soon"] = c[2]["name"] == "The Farmer" and c[2]["status"] == "Coming soon" and not c[2]["enabled"] and c[1]["status"] == "Finished. Best time 7:11"
+    c = cards(pg); print("E:", c)
+    checks["all_finished"] = all(x["status"].startswith("Finished") for x in c) and "Coming soon" not in str(c)
     pg.close()
 
-    # D: end screen after a Chapter 1 win offers Chapter 2; a Chapter 2 win offers nothing (no Chapter 3 yet)
+    # D: end screen after a Chapter 1 win offers Chapter 2; a Chapter 2 win offers Chapter 3; a Chapter 3 win offers nothing
     pg = page(b, store="{}")
     pg.click("#btn-play"); pg.wait_for_timeout(300)
     pg.evaluate("__wus.skipReveal()"); pg.evaluate("__wus.G.time = 200")
@@ -87,8 +106,15 @@ with sync_playwright() as p:
     checks["end_next"] = vis and nxt == "Play Chapter 2: Hogwash"
     pg.click("#btn-end-next"); pg.wait_for_timeout(800)
     checks["end_next_starts"] = pg.evaluate("__wus.G.ch") == 2
-    pg.evaluate("__wus.skipReveal()"); pg.evaluate("__wus.G.pendingEnd = 'hogwash'"); pg.wait_for_timeout(400)
-    checks["no_next_after_ch2"] = pg.is_hidden("#btn-end-next")
+    close_dialogs(pg)
+    pg.evaluate("__wus.skipReveal()"); pg.evaluate("__wus.G.time = 300"); pg.evaluate("__wus.G.pendingEnd = 'hogwash'"); pg.wait_for_timeout(400)
+    nxt = pg.text_content("#btn-end-next"); print("D next after 2:", nxt)
+    checks["next_after_ch2"] = pg.is_visible("#btn-end-next") and nxt == "Play Chapter 3: The Farmer"
+    pg.click("#btn-end-next"); pg.wait_for_timeout(800)
+    checks["end_next_starts_ch3"] = pg.evaluate("__wus.G.ch") == 3
+    close_dialogs(pg)
+    pg.evaluate("__wus.skipReveal()"); pg.evaluate("__wus.G.pendingEnd = 'nobody'"); pg.wait_for_timeout(400)
+    checks["no_next_after_ch3"] = pg.is_hidden("#btn-end-next") and pg.text_content("#end-title") == "Nobody's Farm"
     pg.close()
 
     pg = page(b, 390, 844, True, store='{"ch2": true, "best": 252}')

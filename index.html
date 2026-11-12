@@ -220,6 +220,10 @@ button{font:inherit;color:inherit}
 .chapter .blurb{font:500 14px/1.35 var(--ui-font);color:var(--ui-muted)}
 .chapter .status{grid-column:2;font:var(--ui-w) 13px/1.2 var(--ui-font);color:var(--ui-accent);font-variant-numeric:tabular-nums}
 .chapter:disabled .status{color:var(--ui-muted)}
+.end-post{margin:0;padding:10px 12px;border-left:3px solid var(--ui-accent);font:italic 500 15px/1.4 var(--ui-font);color:var(--ui-muted);opacity:0;transform:translateY(4px);transition:opacity .9s ease,transform .9s ease}
+.end-post.show{opacity:1;transform:none}
+.end-post b{font-style:normal;letter-spacing:.08em;text-transform:uppercase;font-size:11px;color:var(--ui-accent);margin-right:6px}
+@media (prefers-reduced-motion:reduce){.end-post{transition:none}}
 .ach-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;font:500 15px/1.35 var(--ui-font)}
 .ach-list li{display:flex;gap:10px;align-items:baseline}
 .ach-list .mark{flex:none;width:1.2em;text-align:center;color:var(--ui-accent)}
@@ -393,6 +397,7 @@ button{font:inherit;color:inherit}
       <span class="eyebrow" id="end-kicker"></span>
       <h2 id="end-title"></h2>
       <p id="end-text"></p>
+      <p id="end-post" class="end-post" hidden></p>
       <dl class="stats-list" id="end-stats"></dl>
       <div>
         <span class="eyebrow" id="ach-head">Achievements</span>
@@ -569,9 +574,11 @@ function textOutlined(txt, x, y, size, font, fill, stroke, weight) {
   ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, size * 0.28); ctx.strokeStyle = stroke; ctx.strokeText(txt, x, y);
   ctx.fillStyle = fill; ctx.fillText(txt, x, y);
 }
+// a thing that exists in some chapters only carries .ch: one chapter number, or a list of them
+const chIn = (c, ch) => !c || c === ch || (Array.isArray(c) && c.indexOf(ch) >= 0);
 function signText(candy, truth, x, y, size, maxW, colorKey) {
   let tr = RT > 0.5 || RR > 0.5;
-  if (G.ch === 2) { const o = CH2_SIGNS[candy]; if (o) { candy = o[0]; truth = o[1]; } tr = RT > 0.5; }
+  if (G.ch >= 2) { const o = (G.ch === 3 && CH3_SIGNS[candy]) || CH2_SIGNS[candy]; if (o) { candy = o[0]; truth = o[1]; } tr = RT > 0.5; }
   text(tr ? truth : candy, x, y, tr ? size * 0.95 : size, tr ? F_TRUTH : F_CANDY, P(colorKey || 'ink'), maxW);
 }
 if (document.fonts) {
@@ -816,7 +823,7 @@ const BLEATS = {
 };
 
 /* ---------------- the ranch ---------------- */
-const W = 3150, H = 3000;
+const W = 3150, H = 3950;
 const MW = 1500, MH = 1300; // the ranch itself; other pastures sit further out in the same world
 const FX0 = 60, FX1 = 1220, FY0 = 130, FY1 = 1050;
 const HOLE0 = 770, HOLE1 = 830;
@@ -1045,7 +1052,7 @@ const REGIONS = {
   field: { x0: 1880, y0: 1040, x1: 2920, y1: 1780, ix0: 1926, iy0: 1146, ix1: 2874, iy1: 1640 },
 };
 function regionOf(x, y) {
-  for (const k of ['acres', 'field', 'church', 'farm', 'studio']) { const r = REGIONS[k]; if (r && x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) return k; }
+  for (const k of ['acres', 'field', 'church', 'farm', 'studio', 'hill', 'house']) { const r = REGIONS[k]; if (r && x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) return k; }
   return 'ranch';
 }
 // keep the ranch closed now that the world is wider than it
@@ -1277,6 +1284,7 @@ LINES.ewenice = {
 {
   const fin = ACH.pastures; delete ACH.pastures;
   ACH.flock = ['Let My Flock Go', 'Have Sister Ewenice ring the bell for the stampede'];
+  ACH.fleeced = ['Fleeced', 'Sit through the collection plate in the chapel with your glasses off'];
   ACH.pastures = fin;
 }
 let PROOF_COUNT = PROOF_DEFS.length;
@@ -1509,6 +1517,201 @@ const CH2_SIGNS = {
 }
 const ACH_CH2 = new Set(['cried2', 'unretired', 'strings', 'hogwash']);
 
+/* ---------------- Chapter 3: The Farmer ----------------
+   A week after the pigs ran. The wolves are napping where their strings dropped them, the pigs moved up the hill,
+   and the whole flock trusts the Farmer, whom nobody has ever seen. Up the hill stands the Big House.
+   Your friends won't take proof this time: they believe what they see. So you take each one up the hill to a window.
+   Everything below only exists in chapter 3 (ch: 3). */
+const CH3 = 3;
+const CH3_TYPES = new Set(['flood', 'scarecrow', 'hound', 'farmer']);
+const CH3_PARAM = /[?&]chapter=3\b/.test(location.search);
+
+// the hill: the Big House's yard, its own walled region below the studio
+REGIONS.hill = { x0: 0, y0: 3060, x1: 1500, y1: 3940, ix0: 60, iy0: 3290, ix1: 1440, iy1: 3870 };
+const BIGH = { x0: 470, y0: 3150, x1: 1030, y1: 3262, door: 750 };
+chOnly(solid(BIGH.x0, BIGH.y0, BIGH.x1, BIGH.y1, 'building', true), CH3);
+for (const r of [[20, 3236, BIGH.x0, 3262], [BIGH.x1, 3236, 1480, 3262], [20, 3236, 60, 3930], [1440, 3236, 1480, 3930], [20, 3880, 700, 3930], [800, 3880, 1480, 3930]]) {
+  chOnly(solid(r[0], r[1], r[2], r[3], 'wall'), CH3);
+}
+// hedges: cover from the searchlight and the scarecrows
+const HEDGES3 = [[190, 3420, 320, 3460], [1180, 3420, 1310, 3460], [400, 3580, 540, 3620], [960, 3580, 1100, 3620], [220, 3730, 360, 3770], [1140, 3730, 1280, 3770], [560, 3350, 690, 3384], [810, 3350, 940, 3384]];
+for (const h of HEDGES3) chOnly(solid(h[0], h[1], h[2], h[3], 'hedge', true), CH3);
+const LAMP = { x: 750, y: 3650 };
+chOnly(solid(LAMP.x - 7, LAMP.y - 8, LAMP.x + 7, LAMP.y + 2, 'prop'), CH3);
+const SCARECROWS = [[150, 3560, 0], [1350, 3560, Math.PI], [410, 3300, 0.1], [1090, 3300, Math.PI - 0.1]];
+for (const [x, y] of SCARECROWS) chOnly(solid(x - 4, y - 6, x + 4, y, 'prop'), CH3);
+
+// the Big House's front windows. Glasses off: lace curtains. Glasses on: what is behind them.
+// Each friend believes one window, and only with their own eyes.
+const WINDOWS3 = [
+  { id: 'kitchen', x: 545, friend: 'barbara', name: 'the kitchen window', title: 'Through the kitchen window',
+    lines: [['Year 1', 'Clover Crunch (the wolves)'], ['Year 7', 'New Clover Crunch (the pigs)'], ['Year 9', "Farmer's Own Clover Crunch"], ['Recipe', 'Unchanged']],
+    note: 'Three boxes on the counter. Same sawdust in all of them.' },
+  { id: 'radio', x: 640, friend: 'doug', name: 'the radio room window', title: 'Through the radio room window',
+    lines: [['Tape 1', 'NORTH IS RIGHT'], ['Tape 2', 'SOUTH IS RIGHT'], ['Tape 3', 'THE PIGS ARE JUST PIGS'], ['Tape 4', 'A MESSAGE FROM THE FARMER']],
+    note: 'One microphone. One chair. Both campaigns.' },
+  { id: 'records', x: 860, friend: 'nana', name: 'the records room window', title: 'Through the records room window',
+    lines: [['Card', 'NANA FLEECE'], ['Sunny Acres', 'Postponed (pigs ran)'], ['Reschedule', 'Harvest Festival'], ['Menu', 'See card']],
+    note: 'A filing cabinet for every sheep on the farm. Yours is open.' },
+  { id: 'workshop', x: 955, friend: 'ewenice', name: 'the workshop window', title: 'Through the workshop window',
+    lines: [['On the bench', 'Glasses, sheep-sized'], ['Tag inside', 'PROPERTY OF GREENER PASTURES RANCH'], ['Batch', 'One pair per generation'], ['Delivery', 'Mud, east fence']],
+    note: 'A note pinned over the bench: "Somebody restless always finds them."' },
+];
+const WIN_Y = 3286;
+
+// the Big House, inside: a hall full of hounds, and the Farmer's study at the back
+REGIONS.house = { x0: 1700, y0: 3060, x1: 3000, y1: 3940, ix0: 1800, iy0: 3200, ix1: 2900, iy1: 3800 };
+const HOUSE = { x0: 1800, y0: 3200, x1: 2900, y1: 3800, wallY: 3460, door: 2350, sd: [2318, 2382] };
+for (const r of [[1780, 3180, 2920, 3200], [1780, 3180, 1800, 3820], [2900, 3180, 2920, 3820], [1780, 3800, 2920, 3820],
+  [1800, HOUSE.wallY, HOUSE.sd[0], HOUSE.wallY + 14], [HOUSE.sd[1], HOUSE.wallY, 2900, HOUSE.wallY + 14]]) {
+  chOnly(solid(r[0], r[1], r[2], r[3], 'wall', true), CH3);
+}
+const FDESK = { x0: 2270, y0: 3304, x1: 2430, y1: 3332 };
+chOnly(solid(FDESK.x0, FDESK.y0, FDESK.x1, FDESK.y1, 'prop'), CH3);
+const GBOX = { x0: 2690, y0: 3236, x1: 2790, y1: 3262 };
+chOnly(solid(GBOX.x0, GBOX.y0, GBOX.x1, GBOX.y1, 'prop'), CH3);
+const HATRACK = { x: 2470, y: 3500 };
+chOnly(solid(HATRACK.x - 6, HATRACK.y - 6, HATRACK.x + 6, HATRACK.y, 'prop'), CH3);
+
+PORTALS.push(
+  { id: 'hillRoad', ch: CH3, region: 'ranch', x: 604, y: 1246, r: 40, to: 'hillDown', label: 'Walk up the hill road', labelTruth: 'Climb to the Big House', arrive: [604, 1206] },
+  { id: 'hillDown', ch: CH3, region: 'hill', x: 750, y: 3900, r: 40, to: 'hillRoad', label: 'Walk back down the hill', labelTruth: 'Back down to the ranch', arrive: [750, 3846] },
+  { id: 'bigDoor', ch: CH3, region: 'hill', x: BIGH.door, y: 3280, r: 34, to: 'bigDoorIn', label: 'Knock on the door', labelTruth: 'Try the door', arrive: [BIGH.door, 3314], locked: () => !G.flags.march },
+  { id: 'bigDoorIn', ch: CH3, region: 'house', x: HOUSE.door, y: 3786, r: 36, to: 'bigDoor', label: 'Leave the Big House', labelTruth: 'Get out of here', arrive: [HOUSE.door, 3758] },
+);
+
+SCARECROWS.forEach(([x, y, dir], i) => {
+  WOLF_DEFS.push({ id: 'scare' + i, name: 'A scarecrow', type: 'scarecrow', ch: CH3, x, y, behavior: 'sweep', base: dir, amp: i < 2 ? 0.95 : 0.55, freq: 0.42 + i * 0.06, range: i < 2 ? 250 : 270, half: 0.36, dir });
+});
+WOLF_DEFS.push(
+  { id: 'lamp', name: 'The searchlight', type: 'flood', ch: CH3, x: LAMP.x, y: LAMP.y, behavior: 'spin', spin: 0.5, range: 420, half: 0.15, sense: 'beam', dir: -Math.PI / 2 },
+  { id: 'duke', name: 'Duke', type: 'hound', ch: CH3, x: 180, y: 3800, behavior: 'patrol', path: [[180, 3800], [630, 3800], [630, 3670], [180, 3670]], sense: 'sniff', range: 92, half: Math.PI, speed: 40, dir: 0 },
+  { id: 'duchess', name: 'Duchess', type: 'hound', ch: CH3, x: 1320, y: 3670, behavior: 'patrol', path: [[1320, 3670], [870, 3670], [870, 3800], [1320, 3800]], sense: 'sniff', range: 92, half: Math.PI, speed: 40, dir: Math.PI },
+  // inside the Big House
+  { id: 'earl', name: 'Earl', type: 'hound', ch: CH3, x: 1880, y: 3560, behavior: 'patrol', path: [[1880, 3560], [2250, 3560], [2250, 3720], [1880, 3720]], sense: 'sniff', range: 88, half: Math.PI, speed: 36, dir: 0 },
+  { id: 'baron', name: 'Baron', type: 'hound', ch: CH3, x: 2820, y: 3720, behavior: 'patrol', path: [[2820, 3720], [2450, 3720], [2450, 3560], [2820, 3560]], sense: 'sniff', range: 88, half: Math.PI, speed: 36, dir: Math.PI },
+  { id: 'butler3', name: 'The Chairman', type: 'pig', role: 'butler', ch: CH3, x: 2170, y: 3530, behavior: 'patrol', path: [[2170, 3530], [2530, 3530]], sense: 'sniff', range: 78, half: Math.PI, speed: 24, dir: 0 },
+  { id: 'farmer', name: 'The Farmer', type: 'farmer', ch: CH3, x: 2350, y: 3290, behavior: 'sit', range: 0, half: 0, dir: -Math.PI / 2 },
+);
+
+// your friends. Wolves, pigs: fine, they get it now. But the Farmer? The Farmer has always looked after them.
+const LINES3 = {
+  barbara: {
+    pron: 'her', win: 'kitchen',
+    intro: "Hon! The Farmer sent a NOTE. 'Farmer's Own Clover Crunch. Now with real clover.' Finally, somebody up there who cares!",
+    prompt: "What is it, hon? I'm savoring.",
+    ask: 'Have you ever actually seen the Farmer?',
+    reply: "Well, no, hon. Nobody has. But you can tell from the cereal he's a lovely man. Look at this box. Real clover!",
+    hint: 'Hint: Barbara will believe it when she sees it. Take her up the hill to the kitchen window.',
+    told: "I'll believe it when I see it, hon. And I don't see it.",
+    follow: "Up the hill? To the Farmer's? Well, I'd love to thank him for the cereal. Lead the way, hon.",
+    yes: "Clover Crunch. New Clover Crunch. Farmer's Own. Same sawdust, hon. Different box. EVERY TIME. He's been feeding us the same fence for nine years!",
+    farmer: 'Farmer? Hon, he sent me a NOTE. Handwritten. Well, typed. Lovely font.',
+    done: 'I have thrown out all three boxes, hon. I am eating GRASS now. Real grass. It tastes like grass!',
+  },
+  doug: {
+    pron: 'him', win: 'radio',
+    intro: "No more North. No more South. No more Pig Party. I listen to ONE station now: A Message From The Farmer. He's the only one making sense.",
+    prompt: "Make it quick. The Farmer's on at noon.",
+    ask: 'Where does the Farmer broadcast from?',
+    reply: "From the Big House, obviously. Nobody's seen the studio. Nobody needs to. He agrees with me about EVERYTHING.",
+    hint: "Hint: Doug only trusts what he hears. Take him up the hill to the radio room window.",
+    told: "Tapes? Sure, buddy. And I bet he does the voices, too. I'll believe it when I see it.",
+    follow: "You want to see where the Farmer broadcasts? ...Fine. But if he's in there, I'm asking for an autograph.",
+    yes: "NORTH IS RIGHT. SOUTH IS RIGHT. THE PIGS ARE JUST PIGS. One microphone! I've been agreeing with a TAPE RECORDER for nine years!",
+    farmer: "The FARMER? He's the only sane voice on this farm. Says so himself. Every day at noon.",
+    done: "I smashed my radio. Now I talk to actual sheep. They disagree with me. It's GREAT.",
+  },
+  nana: {
+    pron: 'her', win: 'records',
+    intro: "Hello, dear. The Farmer is throwing a Harvest Festival! Everyone is invited. He even remembered my name. He remembers everyone's name.",
+    prompt: 'What is it, dear?',
+    ask: 'How does the Farmer know everyone by name?',
+    reply: "He keeps lovely records, dear. A card for every sheep. Gerald saw the cabinets once, through a window. He says there's a lot of paperwork for a party.",
+    hint: 'Hint: Nana wants to see the records for herself. Take her up the hill to the records room window.',
+    told: "A filing cabinet? Dear, everybody has a filing cabinet. I'll believe it when I see it.",
+    follow: "Up to the Big House? At my age? ...Oh, all right. I've always wanted to see the curtains.",
+    yes: "'Nana Fleece. Sunny Acres: postponed. Reschedule: Harvest Festival.' Oh, dear. I know what gets harvested. I am the HARVEST.",
+    farmer: "The Farmer, dear? He sent me a birthday card. I've never told anyone my birthday.",
+    done: "I've declined the Harvest Festival, dear. Gerald and I are having our own. Nobody gets harvested.",
+  },
+  ewenice: {
+    pron: 'her', win: 'workshop',
+    intro: "Bless you, child! The pastor is napping mid-sermon, and the Farmer sends a new hymn every Sunday. 'He Watches Over Us.' Such a comfort.",
+    prompt: 'Yes, child?',
+    ask: 'Who gave you the idea that the pastor was a wolf?',
+    reply: "Why, YOU did, child! With your glasses. A gift from above, I always say. Wherever did you find them?",
+    hint: 'Hint: Sister Ewenice calls your glasses a gift from above. Take her up the hill to the workshop window.',
+    told: "A workshop? Child, the Lord works in mysterious ways. I'll believe it when I see it.",
+    follow: "Up the hill, child? To the Farmer's own house? ...Very well. I'll bring a hymnal. Just in case.",
+    yes: "Glasses. Rows of them. 'One pair per generation. Leave in the mud by the east fence.' Child... he MADE your glasses. He left them for you to find. Then who has been leading whom?",
+    farmer: "The Farmer, child? He watches over us. It's right there in the hymn.",
+    done: 'I have a new hymn, child. It has no words yet. We will write them together.',
+  },
+};
+const KEVIN3 = {
+  intro: "The Farmer? Never seen him, man. NOBODY has. That's how you know. Also the moon is a Farmer. Possibly a combine harvester.",
+  join: "FINALLY. I'll tell everybody. Starting with the combine harvester thing.",
+  done: ['The Farmer has never been seen. Have YOU ever been seen? Think about it.', "I've been awake since before it was cool. Three times now.", 'The scarecrows are wearing cameras. I saw one blink.'],
+};
+const FLOCK3_LINES = [
+  "The Farmer will sort out those pigs. He's always looked after us.",
+  "Nobody's ever seen the Farmer. That's how you know he's busy.",
+  'Harvest Festival soon! I hope I get picked!',
+  "The wolves are napping and the pigs moved up the hill. That's the Farmer's doing, that is.",
+  "Farmer's Own Clover Crunch! Now with real clover!",
+  'I wrote the Farmer a letter about the fence. He wrote back! He said relax.',
+  'A Message From The Farmer said to relax. So I am relaxing. Very hard.',
+  'No more wolves. No more pigs. Just the Farmer. Simple!',
+];
+const FLOCK3_SPECS = ['Glasses AGAIN? We woke up twice already. I am tired.', "Don't stare at the hill. It's rude.", "The Farmer doesn't like glasses. Or so I hear."];
+const DOG3_LINES = ["The Farmer's hounds outrank me, sir. They have PEDIGREES.", "If you go up that hill, sir, mind Duke and Duchess. They don't bark. They just stare at you until you leave.", 'I sniffed the Farmer once, sir. He smelled like... sheep. Odd.'];
+const LAMB3_LINE = "I saw the Farmer once! Through the window! He had FOUR legs! Nobody believes me because I'm a LAMB!";
+const GERALD3_LINES = ["Sunny Acres is closed. The Farmer sent a card: 'Harvest Festival, all welcome.' I've learned to read the fine print.", "I peeked through a window of the Big House once. Filing cabinets. Nobody needs that many filing cabinets for a party."];
+
+// talk balloons up the hill: hounds and pigs say one thing to the naked eye and another through the glasses
+const HOUND_CHATTER = [['*sniff*', '*sniff* Property line.'], ['Hrrmf.', 'The Farmer says no visitors.'], ['*snore*', 'Not asleep. Watching.']];
+const PIG3_CHATTER = [['Oink.', "We're house staff now. Don't tell the Board."], ['*snort*', 'Dust the portraits. Twice.'], ['Oink oink.', 'Nobody tells the Farmer anything. He already knows.']];
+const MARCH_LINES = ['WE SAW THE WINDOWS!', 'COME OUT, FARMER!', 'SHOW YOURSELF!', 'WHO MADE THE GLASSES?!', 'SAME SAWDUST!', 'NO MORE HARVEST!', 'OPEN THE CURTAINS!'];
+const REVEAL3_LINES = ["He's a SHEEP!", 'Just a sheep!', 'In OVERALLS!', 'Then who runs the farm?', 'Nobody?', 'NOBODY!', 'Baa!'];
+
+// what the signs say in chapter 3: [no glasses, glasses], keyed by the chapter 1 wording
+const CH3_SIGNS = {
+  'GRAZE HAPPY!': ['THE FARMER CARES', 'THE FARMER COUNTS'],
+  'YOUR SHEPHERDS LOVE YOU': ['THE WOLVES ARE NAPPING', 'THE WOLVES ARE ON RETAINER'],
+  '100% FREE RANGE!': ['FREE RANGE! ASK THE FARMER', 'RANGE: WHATEVER HE SAYS'],
+  'FREE LOLLIPOPS!': ['CLINIC: CLOSED FOR NAPS', 'CLINIC: REOPENS NEXT CYCLE'],
+  'DANGER! WOLVES OUT THERE!': ['THE PIGS ARE GONE!', 'THE PIGS WORK UP THE HILL'],
+  'HEATED POOL! JUMP IN!': ['POOL CLOSED', 'POOL: RESERVED FOR THE HARVEST'],
+  'TODAY: AQUA AEROBICS': ['HARVEST FESTIVAL SOON!', 'GUESS WHAT GETS HARVESTED'],
+  'NORTH PASTURE': ['NORTH PASTURE', 'ONE PASTURE'],
+  'SOUTH PASTURE': ['SOUTH PASTURE', 'ONE PASTURE'],
+  'KEEP TO YOUR SIDE': ['ONE FARM, ONE FARMER', 'ONE FARMER, MANY FENCES'],
+  'GIVE AND YE SHALL RECEIVE': ['A HYMN FROM THE FARMER', 'THE FARMER WRITES THESE TOO'],
+  'EVERY VOTE COUNTS!': ['THE FARMER KNOWS BEST', 'THE FARMER KNOWS YOU'],
+  'FREE SUGAR LICKS': ["FARMER'S OWN SUGAR LICKS", 'STILL FAT, DUMB & HAPPY'],
+  'CLOVER CRUNCH': ["FARMER'S OWN CRUNCH", 'SAME SAWDUST, NEW BOX'],
+  'GREENER PASTURES RANCH': ["THE FARMER'S PASTURES", 'IT WAS ALWAYS HIS'],
+  'SUNNY ACRES: HEATED POOL!': ['SUNNY ACRES: CLOSED', 'SUNNY ACRES: PAUSED'],
+  "RELAX. YOU'VE EARNED IT.": ['RELAX. THE FARMER IS HERE.', 'RELAX. HE IS WATCHING.'],
+  'WELCOME TO SUNNY ACRES': ['CLOSED FOR THE FESTIVAL', 'REOPENS AFTER THE HARVEST'],
+  'SPA & MASSAGE': ['FESTIVAL KITCHEN', 'FESTIVAL KITCHEN'],
+  "SPA LINE: YOU'RE NEXT!": ['FESTIVAL LINE', 'HARVEST LINE'],
+  'CHECK-IN': ['FESTIVAL RSVP', 'HARVEST LIST'],
+  'CHAPEL OF THE GOOD SHEPHERD': ['CHAPEL OF THE GOOD FARMER', 'CHAPEL OF THE GOOD FARMER'],
+  'SUNDAY: BLESSED ARE THE MEEK': ['SERVICE: PASTOR NAPPING', 'HYMNS BY THE FARMER'],
+  'THE WOLVES ARE OUT THERE': ['THE FARMER WATCHES OVER US', 'THE FARMER WATCHES'],
+  'SMILE!': ['SMILE!', 'SCARECROW CAM'],
+};
+
+{
+  ACH.cried3 = ['The Sheep Who Cried Farmer', 'Yell "FARMER!" at a sheep'];
+  ACH.peeper = ['Window Shopping', 'Look through all four windows of the Big House'];
+  ACH.hat = ['New Shepherd', 'Take the hat'];
+  ACH.nobody = ["Nobody's Farm", 'Finish Chapter 3 with the curtains open'];
+}
+const ACH_CH3 = new Set(['cried3', 'peeper', 'hat', 'nobody']);
+
 /* ---------------- sheep ---------------- */
 const PUFFS = [[-14, 3, 7.5], [-9, -5, 9], [0, -8, 9.5], [9, -5, 8.5], [14, 3, 7], [7, 8, 8], [-3, 9, 8], [-12, 8, 7], [0, 1, 11]];
 function exprFor(s, isP) {
@@ -1597,6 +1800,7 @@ function drawSheep(s, isP, opt) {
     ctx.moveTo(ex1 - 2.2, ey - 4.8); ctx.lineTo(ex1 + 1.8, ey - 3.8); ctx.moveTo(ex2 - 1.8, ey - 3.8); ctx.lineTo(ex2 + 2.2, ey - 4.8); ctx.stroke();
   }
   if (isP && s.specsOn) drawSpecsOnFace(ex1, ex2, ey);
+  if (isP && s.hat) { ctx.save(); ctx.translate(1, -5); strawHat(0, 0); ctx.restore(); }
   if (s.id === 'barbara') {
     ctx.fillStyle = P('bow'); ctx.beginPath();
     ctx.moveTo(-2, -12); ctx.lineTo(-8.5, -16.5); ctx.lineTo(-7.5, -8.5); ctx.closePath();
@@ -1613,7 +1817,7 @@ function drawSheep(s, isP, opt) {
     fillE('candyA', -1, -11, 9.5, 5.5, -0.15); fillE('candyA', 1, -15, 7, 4.5, -0.1); fillC('candyA', 4, -18, 3.4);
     ctx.strokeStyle = P('candyB'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-8, -10); ctx.lineTo(7, -13); ctx.stroke();
   }
-  if (s.id === 'bellwether') {
+  if (s.id === 'bellwether' || s.id === 'farmer') {
     ctx.strokeStyle = P('hatSh'); ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath();
     for (let a = 0; a < 9.5; a += 0.3) { const r = 1 + a * 0.62; ctx.lineTo(-5 + Math.cos(a + 1.2) * r, -6 + Math.sin(a + 1.2) * r * 0.9); }
     ctx.stroke();
@@ -1685,11 +1889,12 @@ function drawWolfBody(w, opt) {
   const wolfy = isTruthPass() || G.disguisesGone || RR > 0.5;
   const portrait = opt && opt.portrait;
   ctx.save(); ctx.translate(w.x, w.y);
-  if (!portrait && !w.flying) { ctx.fillStyle = P('shadow'); ell(0, 1, w.type === 'twohead' ? 27 : w.type === 'dog' ? 17 : w.type === 'pig' ? 19 : w.type === 'crow' ? 8 : 15, w.type === 'crow' ? 3 : 5.5); ctx.fill(); }
+  if (!portrait && !w.flying) { ctx.fillStyle = P('shadow'); ell(0, 1, w.type === 'twohead' ? 27 : w.type === 'dog' ? 17 : w.type === 'pig' ? 19 : w.type === 'hound' ? 22 : w.type === 'farmer' ? 20 : w.type === 'crow' ? 8 : 15, w.type === 'crow' ? 3 : 5.5); ctx.fill(); }
   if (w.type === 'tower') { ctx.restore(); drawTower(w); return; }
   if (w.type === 'crow') { drawCrow(w); ctx.restore(); return; }
   if (w.limp && !portrait) { ctx.translate(0, -5); ctx.rotate(-1.42 * (w.facing || 1)); }
   if (w.type === 'pig') { drawPig(w); ctx.restore(); return; }
+  if (CH3_TYPES.has(w.type)) { drawCh3Char(w); ctx.restore(); return; }
   if (w.type === 'dog') { drawDog(w); ctx.restore(); return; }
   if (w.type === 'twohead') { drawTwoHead(w, wolfy); ctx.restore(); return; }
   if (w.type === 'pastor') { drawPastor(w, wolfy, portrait); ctx.restore(); return; }
@@ -1740,7 +1945,7 @@ function drawWolfBody(w, opt) {
     ctx.strokeStyle = P('steth'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-5, -47); ctx.quadraticCurveTo(-3, -33, 2, -31); ctx.quadraticCurveTo(7, -33, 6, -47); ctx.stroke();
     fillC('steth', 2, -30, 2.1);
   }
-  if (G.ch === 2 && w.type !== 'guard') fillC('tag', 4, -40, 2.3);
+  if (G.ch >= 2 && w.type !== 'guard') fillC('tag', 4, -40, 2.3);
   let fx = 12, fy = -28 + sw * 0.4;
   if (w.waving) { fx = 17 + (RM ? 0 : Math.sin(t * 9) * 4); fy = -80; }
   ctx.strokeStyle = P(armK); ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(7, -44); ctx.lineTo(fx, fy); ctx.stroke(); fillC(handK, fx, fy, 3.3);
@@ -1927,7 +2132,7 @@ function drawBillboard() {
   ['#B98A8A', '#B99A7A', '#B9B07A', '#8AA88A', '#8AA0B0', '#9A8AB0'].forEach((c, i) => { ctx.strokeStyle = c; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(cx, 232, 80 - i * 8, Math.PI, TAU); ctx.stroke(); });
   ctx.restore();
   fillR('board', 424, 216, 152, 15, 2);
-  text(G.ch === 2 ? 'PROPERTY OF HOG HOLDINGS MARKETING' : 'PROPERTY OF GREENER PASTURES MARKETING', cx, 223.5, 9, F_TRUTH, P('ink'), 144);
+  text(G.ch === 3 ? 'PROPERTY OF THE FARMER' : G.ch === 2 ? 'PROPERTY OF HOG HOLDINGS MARKETING' : 'PROPERTY OF GREENER PASTURES MARKETING', cx, 223.5, 9, F_TRUTH, P('ink'), 144);
 }
 function drawSunnyGate() {
   const x0 = 150, x1 = 230, y = FY0, cx = 190;
@@ -3015,7 +3220,336 @@ for (const d of [
   addStatic(GUARD_DESK.y1, GUARD_DESK.x0 - 4, GUARD_DESK.y0 - 50, GUARD_DESK.x1 + 4, GUARD_DESK.y1 + 20, drawGuardDesk),
 ]) d.ch = CH2;
 // trees that stood where the Farmhouse and the protest go
-for (const d of STATIC) if (d.treeAt && ((d.treeAt[0] === 1300 && d.treeAt[1] === 300) || (d.treeAt[0] === 1420 && d.treeAt[1] === 232) || (d.treeAt[0] === 1430 && d.treeAt[1] === 520))) d.ch = 1;
+for (const d of STATIC) if (d.treeAt && ((d.treeAt[0] === 1300 && d.treeAt[1] === 300) || (d.treeAt[0] === 1420 && d.treeAt[1] === 232) || (d.treeAt[0] === 1430 && d.treeAt[1] === 520))) d.ch = [1, 3];
+
+/* ---------------- drawing Chapter 3 ---------------- */
+// like chapter 2, chapter 3 swaps between real (glasses off) and truth (glasses on)
+for (const [k, real, truth] of [
+  ['bigWall', '#F4EEE2', '#7A766E'], ['bigWallSh', '#DCD2C0', '#64615A'], ['bigRoof', '#4E6B58', '#3C3A37'], ['bigRoofSh', '#3E5646', '#302E2B'],
+  ['curtain', '#F2E6CC', '#55524C'], ['curtainSh', '#DCCBA8', '#45423D'], ['lampGlow', '#FFE9A8', '#FFF6D0'],
+  ['straw', '#E6C25A', '#9A9070'], ['strawSh', '#C9A23E', '#7E765C'], ['sackF', '#C9A878', '#8A8274'],
+  ['hound', '#B9824F', '#7A7064'], ['houndSh', '#9A683C', '#625A50'], ['houndEar', '#6E4A2E', '#4A443D'], ['houndW', '#F4EEE2', '#C9C4BA'],
+  ['overall', '#3E6EA8', '#4A4C52'], ['overallSh', '#2F5684', '#3A3C42'], ['plaid', '#C0453A', '#5E5650'],
+  ['floorH', '#B98E62', '#57524B'], ['floorH2', '#A67C52', '#4D4842'], ['wallH', '#EADFC8', '#3D3A36'], ['wallHSh', '#D2C4A6', '#312E2B'],
+  ['rugH', '#8E3B32', '#5E2A24'], ['rugH2', '#74302A', '#4A201C'], ['deskH', '#6E4B30', '#3A2A20'], ['deskHSh', '#563A24', '#2C2018'],
+  ['camRed', '#B98E62', '#E0352B'],
+]) { PAL_SRC[k] = [real, truth, real]; PAL[k] = PAL_SRC[k].map(hex); }
+const ch3Truth = () => isTruthPass() || G.disguisesGone;
+
+/* ---------------- the hill ---------------- */
+const HILL_TUFTS = [], HILL_FLOWERS = [];
+for (let i = 0; i < 260; i++) { const x = 60 + R() * 1380, y = 3270 + R() * 600; if (!blockedAt(x, y, 8)) HILL_TUFTS.push([x, y]); }
+for (let i = 0; i < 90; i++) { const x = 70 + R() * 1360, y = 3290 + R() * 580; if (Math.abs(x - 750) > 50) HILL_FLOWERS.push({ x, y, c: (R() * 3) | 0 }); }
+const HILL_PATH = [[750, 3930], [750, 3810], [668, 3742], [676, 3650], [716, 3560], [750, 3520], [750, 3270]];
+function drawCh3Grounds() {
+  if (G.ch !== CH3) return;
+  if (regionInVB(REGIONS.hill)) drawHillGround();
+  if (regionInVB(REGIONS.house)) drawHouseGround();
+}
+function drawHillGround() {
+  const R3 = REGIONS.hill, tr = isTruthPass();
+  ctx.fillStyle = P('out'); ctx.fillRect(R3.x0 - 320, R3.y0 - 240, R3.x1 - R3.x0 + 640, R3.y1 - R3.y0 + 480);
+  ctx.fillStyle = P('out2'); for (let x = R3.x0 - 300; x < R3.x1 + 300; x += 140) ctx.fillRect(x, R3.y0 - 240, 60, 290);
+  fillR('grass', 40, 3236, 1420, 690);
+  ctx.fillStyle = P('grass2'); for (let x = 70; x < 1440; x += 116) ctx.fillRect(x, 3262, 52, 640);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(HILL_PATH[0][0], HILL_PATH[0][1]);
+  for (let i = 1; i < HILL_PATH.length; i++) ctx.lineTo(HILL_PATH[i][0], HILL_PATH[i][1]);
+  ctx.strokeStyle = P('path'); ctx.lineWidth = 40; ctx.stroke(); ctx.strokeStyle = P('path2'); ctx.lineWidth = 24; ctx.stroke();
+  ctx.strokeStyle = P('tuft'); ctx.lineWidth = 1.6; ctx.beginPath();
+  for (const t of HILL_TUFTS) if (inVB(t[0], t[1])) tuftPath(t[0], t[1]);
+  ctx.stroke();
+  for (const f of HILL_FLOWERS) {
+    if (!inVB(f.x, f.y)) continue;
+    if (tr) fillC('rock2', f.x, f.y - 3, 1.6);
+    else { ctx.fillStyle = WILD_COLS[f.c]; circles([[f.x - 2, f.y - 4, 1.7], [f.x + 2, f.y - 4, 1.7], [f.x, f.y - 6, 1.7], [f.x, f.y - 2, 1.7]]); ctx.fill(); }
+  }
+  // porch steps
+  fillR('board', BIGH.door - 46, BIGH.y1, 92, 8, 2); fillR('woodSh', BIGH.door - 50, BIGH.y1 + 8, 100, 6, 2);
+  // a "seen" mark under each window you've looked through
+  for (const wd of WINDOWS3) if (G.proof.has(wd.id)) { ctx.strokeStyle = tr ? 'rgba(255,225,120,0.6)' : 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; ell(wd.x, WIN_Y + 4, 20, 6); ctx.stroke(); }
+}
+
+/* the Big House, outside */
+function drawBigHouse() {
+  const { x0, x1, y1, door } = BIGH, top = 3122, tr = isTruthPass(), t = G.clock, mv = RM ? 0 : 1;
+  // chimney, with smoke (or with wires) going up
+  fillR('bigRoofSh', 900, 3040, 26, 60, 2); fillR('bigRoof', 896, 3036, 34, 8, 2);
+  if (tr) { ctx.strokeStyle = 'rgba(236,232,216,0.55)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(906 + i * 5, 3036); ctx.lineTo(906 + i * 5 + Math.sin(t + i) * 3 * mv, 2990); } ctx.stroke(); }
+  else for (let i = 0; i < 3; i++) { const k = (t * 0.25 * mv + i / 3) % 1; ctx.fillStyle = 'rgba(235,235,235,' + (0.45 * (1 - k)).toFixed(2) + ')'; circ(913 + k * 16, 3032 - k * 36, 6 + k * 8); ctx.fill(); }
+  // roof
+  ctx.fillStyle = P('bigRoofSh'); ctx.beginPath(); ctx.moveTo(x0 - 22, top + 6); ctx.lineTo(x0 + 50, 3062); ctx.lineTo(x1 - 50, 3062); ctx.lineTo(x1 + 22, top + 6); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = P('bigRoof'); ctx.beginPath(); ctx.moveTo(x0 - 14, top + 2); ctx.lineTo(x0 + 54, 3068); ctx.lineTo(x1 - 54, 3068); ctx.lineTo(x1 + 14, top + 2); ctx.closePath(); ctx.fill();
+  for (const dx of [610, 890]) { fillR('bigWall', dx - 22, 3078, 44, 34, 3); fillR('trim', dx - 16, 3084, 32, 24, 2); fillR(tr ? 'glass' : 'curtain', dx - 13, 3087, 26, 18, 1); }
+  // walls
+  fillR('bigWall', x0, top, x1 - x0, y1 - top);
+  ctx.strokeStyle = P('bigWallSh'); ctx.lineWidth = 1.3; ctx.beginPath(); for (let y = top + 10; y < y1; y += 10) { ctx.moveTo(x0, y); ctx.lineTo(x1, y); } ctx.stroke();
+  fillR('trim', x0, top, x1 - x0, 5);
+  // sign
+  fillR('wood', door - 82, top + 10, 164, 24, 4); fillR('board', door - 78, top + 13, 156, 18, 3);
+  text(tr ? 'HEAD OFFICE' : 'THE BIG HOUSE', door, top + 22.5, 13, tr ? F_TRUTH : F_BODY, P('ink'), 146, 'center', tr ? '' : '700');
+  // porch
+  fillR('bigRoofSh', door - 74, 3196, 148, 10, 2); for (const px of [door - 68, door + 64]) fillR('trim', px, 3204, 5, y1 - 3204);
+  // door
+  const open = G.flags.march;
+  fillR('woodSh', door - 22, 3210, 44, y1 - 3210, 3);
+  if (open) fillR('farmOut', door - 18, 3214, 36, y1 - 3214, 2); else { fillR('deskH', door - 18, 3214, 36, y1 - 3214, 2); fillC('tag', door + 11, 3240, 2); }
+  fillR('board', door - 20, y1 - 2, 40, 5, 1); text(tr ? 'WE KNOW' : 'WELCOME', door, y1 + 0.5, 5.5, tr ? F_TRUTH : F_BODY, P('ink'), 36, 'center', tr ? '' : '700');
+  // the four windows
+  for (const wd of WINDOWS3) drawBigWindow(wd, tr);
+}
+function drawBigWindow(wd, tr) {
+  const x = wd.x, y0 = 3184, w = 58, h = 48;
+  fillR('trim', x - w / 2 - 4, y0 - 4, w + 8, h + 8, 3);
+  fillR(tr ? 'glass' : 'lampGlow', x - w / 2, y0, w, h, 2);
+  ctx.save(); ctx.beginPath(); ctx.rect(x - w / 2, y0, w, h); ctx.clip();
+  if (tr) drawWindowInside(wd.id, x, y0 + h);
+  else {
+    // lace curtains, drawn shut
+    for (const s of [-1, 1]) {
+      ctx.fillStyle = P('curtain'); ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x + s * (w / 2), y0); ctx.lineTo(x + s * (w / 2), y0 + h); ctx.quadraticCurveTo(x + s * 6, y0 + h - 4, x, y0 + h); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = P('curtainSh'); ctx.lineWidth = 1; ctx.beginPath(); for (let i = 1; i < 4; i++) { const xx = x + s * i * 7; ctx.moveTo(xx, y0); ctx.lineTo(xx + s * 2, y0 + h); } ctx.stroke();
+    }
+  }
+  ctx.restore();
+  fillR('trim', x - 2, y0, 4, h); fillR('woodSh', x - w / 2 - 6, y0 + h + 4, w + 12, 6, 2);
+  if (!tr) { ctx.fillStyle = '#E8735A'; circles([[x - 18, y0 + h + 3, 3], [x - 6, y0 + h + 2, 3.4], [x + 8, y0 + h + 3, 3], [x + 19, y0 + h + 2, 3.2]]); ctx.fill(); }
+}
+// what the glasses show through each window
+function drawWindowInside(id, x, yb) {
+  ctx.fillStyle = 'rgba(30,28,26,0.35)'; ctx.fillRect(x - 30, yb - 50, 60, 50);
+  if (id === 'kitchen') {
+    fillR('deskH', x - 28, yb - 12, 56, 12);
+    [['#C9A456', 'CC'], ['#9C9A94', 'NEW'], ['#B9B5AA', 'F.O.']].forEach(([c, l], i) => { ctx.fillStyle = c; ctx.fillRect(x - 22 + i * 16, yb - 32, 12, 20); text(l, x - 16 + i * 16, yb - 22, 4.5, F_TRUTH, '#22211F', 11); });
+  } else if (id === 'radio') {
+    fillR('deskH', x - 28, yb - 12, 56, 12);
+    fillR('iron', x - 3, yb - 30, 6, 18, 2); fillC('iron', x, yb - 33, 5);
+    for (let i = 0; i < 4; i++) { fillR('board', x - 26 + i * 7, yb - 46, 5, 9); fillR('board', x + 12 + (i % 2) * 7, yb - 46 + (i >> 1) * 10, 5, 9); }
+  } else if (id === 'records') {
+    for (let i = 0; i < 3; i++) { fillR('iron', x - 27 + i * 19, yb - 44, 16, 44, 1); for (let j = 0; j < 4; j++) fillR('steth', x - 25 + i * 19, yb - 41 + j * 10, 12, 7, 1); }
+    fillR('board', x + 2, yb - 22, 14, 8, 1);
+  } else {
+    fillR('deskH', x - 28, yb - 12, 56, 12);
+    ctx.strokeStyle = '#151413'; ctx.lineWidth = 1.2;
+    for (let i = 0; i < 4; i++) { const gx = x - 20 + i * 13; ell(gx - 2.5, yb - 16, 2.4, 1.8); ctx.stroke(); ell(gx + 2.5, yb - 16, 2.4, 1.8); ctx.stroke(); }
+    fillR('board', x - 16, yb - 42, 32, 12, 1); text('1 PER GEN.', x, yb - 36, 4.6, F_TRUTH, '#22211F', 30);
+  }
+}
+// the Farmer's white fence. Through the glasses it is the same electric wire as the ranch's.
+const HILL_FENCE = [];
+function fenceRun3(x0, y0, x1, y1, skip) {
+  const horiz = y0 === y1, len = horiz ? x1 - x0 : y1 - y0, n = Math.round(len / 29), step = len / n;
+  for (let i = 0; i < n; i++) {
+    const a = (horiz ? x0 : y0) + i * step, mid = a + step / 2;
+    if (skip && mid > skip[0] && mid < skip[1]) continue;
+    const seg = horiz ? { x: a, y: y0, len: step, v: false } : { x: x0, y: a, len: step, v: true };
+    seg.sortY = horiz ? y0 : a + step / 2; seg.delay = 0;
+    seg.bx0 = seg.x - 6; seg.by0 = seg.y - 34; seg.bx1 = seg.x + (horiz ? step : 0) + 6; seg.by1 = seg.y + (horiz ? 4 : step + 4);
+    HILL_FENCE.push(seg);
+  }
+}
+fenceRun3(40, 3252, BIGH.x0 - 4, 3252); fenceRun3(BIGH.x1 + 4, 3252, 1460, 3252);
+fenceRun3(40, 3252, 40, 3904); fenceRun3(1460, 3252, 1460, 3904); fenceRun3(40, 3904, 1460, 3904, [700, 800]);
+
+/* the searchlight on its post */
+function drawLampPost(w) {
+  const tr = isTruthPass();
+  fillE('iron', 0, -1, 9, 3); fillR('iron', -3, -118, 6, 118, 2);
+  ctx.strokeStyle = P('iron'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-10, -112); ctx.lineTo(10, -112); ctx.stroke();
+  ctx.save(); ctx.translate(0, -122);
+  fillC('iron', 0, 0, 10);
+  ctx.fillStyle = P('lampGlow'); ell(Math.cos(w.dir) * 5.5, Math.sin(w.dir) * 3.8, 6.5, 5.5); ctx.fill();
+  if (tr) { fillC('camRed', -6, -7, 1.8); }
+  ctx.restore();
+}
+/* scarecrows: straw to the naked eye, cameras on a pole through the glasses */
+function drawScarecrow(w) {
+  const tr = ch3Truth(), f = Math.cos(w.dir) < 0 ? -1 : 1, t = G.clock, mv = RM ? 0 : 1;
+  fillR('woodSh', -2.5, -64, 5, 64, 1.5);
+  fillR('woodSh', -26, -54, 52, 4, 1.5);
+  // body: a stuffed shirt, arms out
+  fillR('plaid', -12, -58, 24, 26, 5);
+  ctx.strokeStyle = P('plaid'); ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-10, -52); ctx.lineTo(-24, -50); ctx.moveTo(10, -52); ctx.lineTo(24, -50); ctx.stroke();
+  ctx.strokeStyle = P('straw'); ctx.lineWidth = 1.3; ctx.beginPath();
+  for (const s of [-1, 1]) for (let i = 0; i < 4; i++) { ctx.moveTo(s * 27, -50); ctx.lineTo(s * (31 + i), -56 + i * 4 + Math.sin(t * 2 + i) * mv); }
+  for (let i = 0; i < 5; i++) { ctx.moveTo(-8 + i * 4, -32); ctx.lineTo(-9 + i * 4.5, -26); }
+  ctx.stroke();
+  fillR('pants', -10, -40, 20, 8, 2);
+  ctx.save(); ctx.translate(0, -72); ctx.scale(f, 1);
+  if (tr) {
+    fillR('iron', -10, -9, 22, 16, 3); fillC('iron', 13, -1, 6); fillC('camRed', 14.5, -1, 3.4);
+    if (!RM && Math.sin(t * 3) > 0) fillC('camRed', -6, -5, 1.6);
+    fillR('tag', -8, 8, 12, 4, 1);
+  } else {
+    fillC('sackF', 0, 0, 11);
+    ctx.strokeStyle = P('ink'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(1, -3); ctx.lineTo(4, 0); ctx.moveTo(4, -3); ctx.lineTo(1, 0);
+    ctx.moveTo(6, -3); ctx.lineTo(9, 0); ctx.moveTo(9, -3); ctx.lineTo(6, 0); ctx.moveTo(-1, 5); ctx.quadraticCurveTo(4, 8, 9, 4); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.save(); ctx.translate(0, -72); strawHat(0, 0); ctx.restore();
+}
+/* the Farmer's hounds: droopy bassets, and through the glasses, spiked collars */
+function drawHound(w) {
+  ctx.scale(w.facing || 1, 1);
+  const tr = ch3Truth(), moving = w.walk > 0.1, sw = moving ? Math.sin(w.phase) * 2.5 : 0, sit = w.sitting || (w.distracted > 0 && !moving), t = G.clock;
+  ctx.strokeStyle = P('hound'); ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-18, -14); ctx.quadraticCurveTo(-26, -22 + (RM ? 0 : Math.sin(t * 6) * 2), -24, -28); ctx.stroke();
+  if (!sit) for (const lx of [-15 + sw, -9 - sw, 9 - sw, 15 + sw]) fillR('houndSh', lx - 2, -8, 5, 8, 2);
+  else { fillR('houndSh', 8, -8, 5, 8, 2); fillR('houndSh', 14, -8, 5, 8, 2); fillE('houndSh', -10, -3, 9, 4); }
+  ctx.save(); if (sit) { ctx.translate(-4, -2); ctx.rotate(-0.28); }
+  fillE('hound', 0, -13, 21, 8.5); fillE('houndW', 6, -9.5, 10, 4);
+  ctx.restore();
+  const hx = 20, hy = sit ? -26 : -20;
+  fillE('hound', hx, hy, 8.5, 7.5); fillE('hound', hx + 8, hy + 3, 6.5, 4.5); fillC('nose', hx + 13.5, hy + 2, 2.2);
+  fillE('houndEar', hx - 3, hy + 7, 3.6, 8.5, 0.2);
+  fillC('pupil', hx + 3, hy - 2, 1.2); ctx.strokeStyle = P('houndSh'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(hx, hy - 4); ctx.lineTo(hx + 5, hy - 3.5); ctx.stroke();
+  if (tr) {
+    ctx.strokeStyle = P('iron'); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(hx - 6, hy + 4); ctx.lineTo(hx + 1, hy + 9); ctx.stroke();
+    ctx.fillStyle = P('foil'); for (let i = 0; i < 3; i++) { const sx = hx - 5 + i * 2.8, sy = hy + 5 + i * 1.8; ctx.beginPath(); ctx.moveTo(sx - 1.2, sy); ctx.lineTo(sx - 2.4, sy - 3); ctx.lineTo(sx + 0.6, sy - 1); ctx.closePath(); ctx.fill(); }
+    fillC('tag', hx - 1, hy + 12, 2.2); text('F', hx - 1, hy + 12.2, 3.2, F_TRUTH, '#22211F');
+  } else { fillR('band', hx - 6, hy + 4, 7, 3, 1); fillC('tag', hx - 2, hy + 8.5, 1.6); }
+}
+/* the Farmer. Glasses off: a big kind man in overalls. Glasses on: an old black ram in overalls, with glasses. */
+const farmerSheepy = () => ch3Truth();
+function drawFarmer(w) {
+  if (farmerSheepy()) {
+    const k = 1.22, pd = G.playerDark;
+    G.playerDark = 0.86;
+    try { drawSheep({ id: 'farmer', x: 0, y: 0, facing: w.facing || 1, walk: 0, phase: 0, grazing: false, hopT: w.hopT || 0, specsOn: true, scale: k, caughtFx: 0, state: 'woke' }, true, { portrait: true }); }
+    finally { G.playerDark = pd; }
+    ctx.save(); ctx.scale((w.facing || 1) * k, k);
+    // overalls over the wool
+    fillR('overall', -9, -27, 17, 13, 3); fillR('overallSh', -9, -16, 17, 3);
+    ctx.strokeStyle = P('overall'); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-7, -26); ctx.lineTo(-11, -34); ctx.moveTo(6, -26); ctx.lineTo(9, -34); ctx.stroke();
+    fillC('tag', -6, -23, 1.2); fillC('tag', 5, -23, 1.2);
+    if (!w.hatOff) { ctx.translate(15, -36 - (w.hatBounce || 0) * 4); strawHat(0, 0); }
+    ctx.restore();
+    return;
+  }
+  ctx.scale((w.facing || 1) * 1.14, 1.14);
+  const hy = -60;
+  fillR('overall', -8, -26, 7, 26, 2); fillR('overall', 1, -26, 7, 26, 2);
+  fillE('boots', -4.5, -1.5, 5.4, 2.8); fillE('boots', 4.5, -1.5, 5.4, 2.8);
+  fillR('plaid', -12, -50, 24, 28, 7);
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = -9; i < 12; i += 5) { ctx.moveTo(i, -50); ctx.lineTo(i, -24); } ctx.stroke();
+  fillR('overall', -9, -42, 18, 22, 3); fillC('tag', -6, -40, 1.4); fillC('tag', 6, -40, 1.4);
+  ctx.strokeStyle = P('plaid'); ctx.lineWidth = 6.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-8, -46); ctx.lineTo(-13, -28); ctx.moveTo(8, -46); ctx.lineTo(13, -28); ctx.stroke();
+  fillC('skin', -13, -27, 3.4); fillC('skin', 13, -27, 3.4);
+  humanHead('farmer', hy);
+  ctx.fillStyle = P('hairG'); ctx.beginPath(); ctx.moveTo(-2, hy + 4); ctx.quadraticCurveTo(4, hy + 16, 11, hy + 4); ctx.quadraticCurveTo(5, hy + 8, -2, hy + 4); ctx.fill();
+  if (!w.hatOff) strawHat(hy, (w.hatBounce || 0) * 4);
+}
+function drawCh3Char(w) {
+  if (w.type === 'flood') drawLampPost(w);
+  else if (w.type === 'scarecrow') drawScarecrow(w);
+  else if (w.type === 'hound') drawHound(w);
+  else if (w.type === 'farmer') drawFarmer(w);
+}
+
+/* ---------------- the Big House, inside ---------------- */
+function drawHouseGround() {
+  const R3 = REGIONS.house, { x0, y0, x1, y1 } = HOUSE, tr = isTruthPass();
+  ctx.fillStyle = P('farmOut'); ctx.fillRect(R3.x0 - 320, R3.y0 - 240, R3.x1 - R3.x0 + 640, R3.y1 - R3.y0 + 480);
+  fillR('floorH', x0, y0, x1 - x0, y1 - y0);
+  ctx.strokeStyle = P('floorH2'); ctx.lineWidth = 2; ctx.beginPath();
+  for (let y = y0 + 22, r = 0; y < y1; y += 22, r++) { ctx.moveTo(x0, y); ctx.lineTo(x1, y); for (let x = x0 + (r % 2 ? 40 : 100); x < x1; x += 130) { ctx.moveTo(x, y - 22); ctx.lineTo(x, y); } }
+  ctx.stroke();
+  fillR('rugH2', HOUSE.door - 46, HOUSE.wallY + 14, 92, y1 - HOUSE.wallY - 14); fillR('rugH', HOUSE.door - 40, HOUSE.wallY + 14, 80, y1 - HOUSE.wallY - 14);
+  fillR('rugH2', 2160, 3236, 380, 140, 6); fillR('rugH', 2166, 3242, 368, 128, 5);
+  if (tr) { ctx.strokeStyle = P('gold'); ctx.lineWidth = 1.5; ctx.strokeRect(2174, 3250, 352, 112); }
+}
+function drawHouseBackWall() {
+  const tr = isTruthPass(), cx = HOUSE.door;
+  fillR('wallH', 1780, 3100, 1140, 100); fillR('wallHSh', 1780, 3170, 1140, 30); fillR(tr ? 'gold' : 'trim', 1780, 3168, 1140, 3);
+  // the big window behind the desk, curtains shut
+  fillR('trim', cx - 92, 3112, 184, 62, 3); fillR('glass', cx - 86, 3116, 172, 54, 2);
+  const shut = !G.flags.curtains;
+  for (const s of [-1, 1]) {
+    const w = shut ? 86 : 20;
+    ctx.fillStyle = P('rugH'); ctx.fillRect(s < 0 ? cx - 92 : cx + 92 - w, 3108, w, 70);
+    ctx.strokeStyle = P('rugH2'); ctx.lineWidth = 1.4; ctx.beginPath(); for (let i = 6; i < w; i += 9) { const xx = s < 0 ? cx - 92 + i : cx + 92 - i; ctx.moveTo(xx, 3108); ctx.lineTo(xx, 3178); } ctx.stroke();
+  }
+  fillR('gold', cx - 98, 3104, 196, 5, 2);
+  // the plan, on an easel chart (or a calendar of farm chores)
+  fillR('wood', 2560, 3112, 110, 60, 2); fillR('board', 2564, 3116, 102, 52, 1);
+  if (tr) {
+    text('THE PLAN', 2615, 3124, 8, F_TRUTH, P('ink'), 90);
+    [['YR 1', 'WOLVES'], ['YR 7', 'PIGS'], ['YR 9', 'FARMER'], ['YR 10', '?']].forEach(([a, b], i) => { text(a, 2584, 3136 + i * 8, 6, F_TRUTH, P('ink'), 30); text(b, 2634, 3136 + i * 8, 6, F_TRUTH, i === 3 ? P('band') : P('ink'), 60); });
+  } else {
+    text('CHORES', 2615, 3124, 8.5, F_BODY, P('ink'), 90, 'center', '700');
+    for (let i = 0; i < 4; i++) { fillR('steth', 2576, 3134 + i * 8, 6, 5); ctx.strokeStyle = P('ink'); ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(2588, 3137 + i * 8); ctx.lineTo(2650 - i * 6, 3137 + i * 8); ctx.stroke(); }
+  }
+  // bookshelves
+  for (const bx of [1840, 1990]) { fillR('deskH', bx, 3110, 110, 62, 2); for (let r = 0; r < 3; r++) for (let i = 0; i < 9; i++) fillR(['band', 'overall', 'tag', 'steth'][(i + r) % 4], bx + 6 + i * 11, 3115 + r * 19, 8, 15, 1); }
+}
+function drawHouseInnerWall() {
+  const tr = isTruthPass(), [d0, d1] = HOUSE.sd;
+  for (const [a, b] of [[1800, d0], [d1, 2900]]) { fillR('wallHSh', a, HOUSE.wallY - 46, b - a, 60); fillR('wallH', a, HOUSE.wallY - 52, b - a, 8, 2); }
+  for (const x of [d0, d1]) fillR(tr ? 'gold' : 'deskH', x - 3, HOUSE.wallY - 58, 6, 72, 2);
+  fillR('wood', HOUSE.door - 38, HOUSE.wallY - 66, 76, 14, 3); fillR('board', HOUSE.door - 35, HOUSE.wallY - 64, 70, 10, 2);
+  text(tr ? 'MANAGEMENT' : 'STUDY', HOUSE.door, HOUSE.wallY - 58.5, 7, tr ? F_TRUTH : F_BODY, P('ink'), 64, 'center', tr ? '' : '700');
+  // the portrait gallery, facing the hall
+  [[1960, 'THE FARMER', 'YEAR 1'], [2140, 'THE FARMER', 'YEAR 9'], [2600, 'THE FARMER', 'NEXT']].forEach(([px, a, b], i) => {
+    fillR(tr ? 'gold' : 'deskH', px - 34, HOUSE.wallY - 44, 68, 46, 3); fillR(tr ? 'farmOut' : 'glass', px - 29, HOUSE.wallY - 39, 58, 32, 2);
+    ctx.save(); ctx.beginPath(); ctx.rect(px - 29, HOUSE.wallY - 39, 58, 32); ctx.clip();
+    if (i < 2) {
+      if (tr) { ctx.translate(px - 4, HOUSE.wallY - 2); ctx.scale(0.62, 0.62); const pd = G.playerDark; G.playerDark = i === 0 ? 0.6 : 0.86; try { drawSheep({ id: 'farmer', x: 0, y: 0, facing: 1, walk: 0, phase: 0, grazing: false, hopT: 0, specsOn: true, scale: 1, caughtFx: 0, state: 'woke' }, true, { portrait: true }); } finally { G.playerDark = pd; } if (i === 1) { ctx.translate(15, -36); strawHat(0, 0); } }
+      else { ctx.translate(px, HOUSE.wallY + 26); ctx.scale(0.7, 0.7); fillR('plaid', -12, -50, 24, 28, 7); humanHead('farmer', -60); strawHat(-60, 0); }
+    } else if (!tr) { ctx.translate(px, HOUSE.wallY + 26); ctx.scale(0.7, 0.7); fillR('plaid', -12, -50, 24, 28, 7); humanHead('farmer', -60); strawHat(-60, 0); }
+    ctx.restore();
+    fillR('board', px - 30, HOUSE.wallY + 2, 60, 10, 2); text(tr ? b : a, px, HOUSE.wallY + 7, 6, tr ? F_TRUTH : F_BODY, P(tr && i === 2 ? 'band' : 'ink'), 56, 'center', tr ? '' : '700');
+  });
+}
+function drawHouseFrontWall() {
+  fillR('wallHSh', 1780, 3798, 1140, 26); fillR('wallH', 1780, 3793, 1140, 7);
+  fillR('deskH', HOUSE.door - 44, 3790, 88, 34, 3); fillR('deskHSh', HOUSE.door - 39, 3794, 38, 30, 2); fillR('deskHSh', HOUSE.door + 1, 3794, 38, 30, 2);
+}
+function drawFarmerDesk() {
+  const { x0, y0, x1, y1 } = FDESK, tr = isTruthPass();
+  fillR('deskHSh', x0, y0 - 10, x1 - x0, y1 - y0 + 10, 4); fillR('deskH', x0 + 3, y0 - 8, x1 - x0 - 6, 16, 3);
+  fillR('board', x0 + 18, y0 - 12, 30, 9, 1); fillR('board', x0 + 22, y0 - 14, 30, 9, 1);
+  if (tr) { text('A MESSAGE FROM THE FARMER', x0 + 37, y0 - 9.5, 2.6, F_TRUTH, P('ink'), 28); fillR('iron', x1 - 40, y0 - 22, 5, 14, 2); fillC('iron', x1 - 37.5, y0 - 24, 4); }
+  else { fillE('glass', x1 - 36, y0 - 9, 7, 4); fillR('apron', x1 - 64, y0 - 14, 14, 9, 1); }
+}
+function drawGlassesBox() {
+  const { x0, y0, x1, y1 } = GBOX, tr = isTruthPass();
+  fillR('woodSh', x0, y0 - 20, x1 - x0, y1 - y0 + 20, 3); fillR('wood', x0 + 3, y0 - 18, x1 - x0 - 6, 16, 2);
+  ctx.strokeStyle = '#151413'; ctx.lineWidth = 1.2;
+  for (let i = 0; i < 4; i++) { const gx = x0 + 18 + i * 21; ell(gx - 3.5, y0 - 12, 3.2, 2.4); ctx.stroke(); ell(gx + 3.5, y0 - 12, 3.2, 2.4); ctx.stroke(); }
+  fillR('board', x0 + 10, y1 - 8, x1 - x0 - 20, 9, 1);
+  text(tr ? 'FOR THE EAST FENCE' : 'READING GLASSES', (x0 + x1) / 2, y1 - 3.5, 5.5, tr ? F_TRUTH : F_BODY, P('ink'), x1 - x0 - 24, 'center', tr ? '' : '700');
+}
+// the hat rack: coats and hats to the naked eye; through the glasses, every disguise on the farm
+function drawHatRack() {
+  const { x, y } = HATRACK, tr = isTruthPass();
+  fillE('deskHSh', x, y, 14, 4); fillR('deskH', x - 2.5, y - 86, 5, 86, 2);
+  ctx.strokeStyle = P('deskH'); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x - 16, y - 80); ctx.lineTo(x + 16, y - 72); ctx.moveTo(x + 16, y - 80); ctx.lineTo(x - 16, y - 72); ctx.stroke();
+  if (tr) {
+    ctx.save(); ctx.translate(x - 14, y - 70); ctx.scale(0.6, 0.6); strawHat(0, 0); ctx.restore();
+    ctx.save(); ctx.translate(x + 14, y - 74); ctx.scale(0.55, 0.55); bonnetFront(0, 0); ctx.restore();
+    fillR('band', x - 4, y - 66, 3, 14); fillR('apron', x + 4, y - 64, 6, 10, 1);
+  } else { fillR('coat', x - 14, y - 76, 12, 30, 4); fillR('plaid', x + 3, y - 74, 12, 26, 4); ctx.save(); ctx.translate(x, y - 88); ctx.scale(0.6, 0.6); strawHat(0, 0); ctx.restore(); }
+}
+
+for (const d of [
+  addStatic(BIGH.y1 + 2, BIGH.x0 - 40, 2980, BIGH.x1 + 40, BIGH.y1 + 16, drawBigHouse),
+  ...HEDGES3.map((h) => addStatic(h[3], h[0] - 6, h[1] - 32, h[2] + 6, h[3] + 2, () => drawHedgeBox(h))),
+  ...HILL_FENCE.map((seg) => addStatic(seg.sortY, seg.bx0, seg.by0, seg.bx1, seg.by1, () => drawFenceSeg(seg))),
+  addStatic(3200, 1776, 3090, 2924, 3202, drawHouseBackWall),
+  addStatic(HOUSE.wallY + 14, 1796, HOUSE.wallY - 70, 2904, HOUSE.wallY + 16, drawHouseInnerWall),
+  addStatic(3824, 1776, 3786, 2924, 3826, drawHouseFrontWall),
+  addStatic(FDESK.y1, FDESK.x0 - 6, FDESK.y0 - 30, FDESK.x1 + 6, FDESK.y1 + 4, drawFarmerDesk),
+  addStatic(GBOX.y1, GBOX.x0 - 4, GBOX.y0 - 26, GBOX.x1 + 4, GBOX.y1 + 4, drawGlassesBox),
+  addStatic(HATRACK.y, HATRACK.x - 22, HATRACK.y - 96, HATRACK.x + 22, HATRACK.y + 6, drawHatRack),
+  ...[[110, 3150, 1.1], [260, 3120, 1], [1240, 3130, 1.05], [1390, 3160, 1.15], [380, 3100, 0.9], [1130, 3096, 0.95]].map(([x, y, s]) => addStatic(y, x - 30 * s, y - 86 * s, x + 30 * s, y + 2, () => drawOutTree(x, y, s))),
+]) d.ch = CH3;
+
+// a little arrow at the screen edge when a friend is tagging along: where to take them
+function drawCh3Overlays() {
+  if (G.ch !== CH3 || G.mode !== 'play' || G.phase !== 'fleecing' || G.modal) return;
+  const reg = regionOf(G.player.x, G.player.y), tag = G.sheep.find((s) => s.follow && LINES3[s.id] && !s.deep);
+  if (!tag) return;
+  if (reg === 'ranch') drawEdgeArrow(604, 1240, 'Hill road', '#FFE14D', 'ranch');
+  else if (reg === 'hill') { const wd = WINDOWS3.find((q) => q.id === LINES3[tag.id].win); if (wd) drawEdgeArrow(wd.x, WIN_Y, 'Window', '#FFE14D', 'hill'); }
+}
 
 /* ---------------- camera ---------------- */
 const cam = { x: 0, y: 0 };
@@ -3067,7 +3601,8 @@ function drawBeam(w) {
   if (w.alert > 0.04) { ctx.fillStyle = 'rgba(220,60,40,' + (w.alert * 0.4).toFixed(2) + ')'; ctx.fill(); }
   ctx.strokeStyle = tr ? 'rgba(255,255,255,0.7)' : 'rgba(255,200,60,0.8)'; ctx.lineWidth = 1.4; ctx.stroke();
   ctx.strokeStyle = 'rgba(' + base + ',0.35)'; ctx.lineWidth = 7; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(x + 16, y - 140); ctx.lineTo(x + Math.cos(w.dir) * 50, y + Math.sin(w.dir) * 50); ctx.stroke();
+  const fl = w.type === 'flood';
+  ctx.beginPath(); ctx.moveTo(x + (fl ? Math.cos(w.dir) * 6 : 16), y - (fl ? 122 : 140)); ctx.lineTo(x + Math.cos(w.dir) * 50, y + Math.sin(w.dir) * 50); ctx.stroke();
 }
 function drawSniff(w) {
   const tr = isTruthPass(), t = G.clock, col = tr ? '170,190,90' : '255,95,162';
@@ -3201,7 +3736,7 @@ function drawFX() {
   if (p.bubble) bubbleAt(p.x, p.y - 56, p.bubble.text);
   if (G.phase === 'fleecing') {
     for (const w of G.wolves) if (w.active && w.alert > 0.04) drawAlertMark(w.x, w.y - wolfTop(w, true), w.alert);
-    if (G.hiddenFrom && (isTruthPass() || G.prayHidden || G.camHidden || G.ch === 2) && !p.bubble) bubbleAt(p.x, p.y - 52, G.prayHidden ? 'Head bowed' : G.camHidden ? 'Holding still' : 'Hidden');
+    if (G.hiddenFrom && (isTruthPass() || G.prayHidden || G.camHidden || G.ch >= 2) && !p.bubble) bubbleAt(p.x, p.y - 52, G.prayHidden ? 'Head bowed' : G.camHidden ? 'Holding still' : 'Hidden');
   }
   for (const s of G.sheep) if (s.sulk > 0 && inVB(s.x, s.y) && !s.bubble) drawSulk(s.x + 24 * (s.facing || 1), s.y - 44 * (s.scale || 1));
   if (G.mode === 'play' && G.interact && !G.modal && !G.fade) {
@@ -3259,16 +3794,17 @@ function drawPost(t) {
 }
 const DL = [];
 function renderWorld(t) {
-  RT = t; RR = G.ch === 2 ? 1 - t : G.realT;
+  RT = t; RR = G.ch >= 2 ? 1 - t : G.realT;
   VB.x0 = cam.x - 90; VB.y0 = cam.y - 140; VB.x1 = cam.x + view.w / zoom + 90; VB.y1 = cam.y + view.h / zoom + 140;
   setWorldT();
   drawGround();
   drawRegionGrounds();
+  drawCh3Grounds();
   drawGlassesProp();
   drawCones();
   drawFeetRing();
   DL.length = 0;
-  for (const d of STATIC) if ((!d.ch || d.ch === G.ch) && d.x1 >= VB.x0 && d.x0 <= VB.x1 && d.y1 >= VB.y0 && d.y0 <= VB.y1) DL.push(d);
+  for (const d of STATIC) if (chIn(d.ch, G.ch) && d.x1 >= VB.x0 && d.x0 <= VB.x1 && d.y1 >= VB.y0 && d.y0 <= VB.y1) DL.push(d);
   if (G.lick && inVB(G.lick.x, G.lick.y)) DL.push({ y: G.lick.y, draw: drawLick });
   for (const s of G.sheep) if (inVB(s.x, s.y)) DL.push({ y: s.y, s });
   for (const w of G.wolves) if (w.active && inVB(w.x, w.y)) DL.push({ y: w.y, w });
@@ -3281,8 +3817,8 @@ function renderWorld(t) {
   drawPost(t);
 }
 // an arrow at the screen edge pointing at a spot in the ranch that is off screen
-function drawEdgeArrow(wx, wy, label, fill) {
-  if (regionOf(G.player.x, G.player.y) !== 'ranch') return;
+function drawEdgeArrow(wx, wy, label, fill, reg) {
+  if (regionOf(G.player.x, G.player.y) !== (reg || 'ranch')) return;
   const [gx, gy] = toScreen(wx, wy);
   const m = 48;
   if (gx > m && gx < view.w - m && gy > m + 70 && gy < view.h - m) return;
@@ -3314,6 +3850,7 @@ function screenOverlays() {
   if (G.mode === 'play' && G.phase === 'fleecing' && G.lick) drawEdgeArrow(G.lick.x, G.lick.y - 12, 'Sugar lick', '#FF8CC6');
   drawPrayerCaption();
   drawStudioCaption();
+  drawCh3Overlays();
 }
 function renderTitle() {
   renderWorld(0);
@@ -3373,9 +3910,9 @@ function makeWolf(d) {
 }
 function newGame(opts) {
   opts = opts || {};
-  const ch = opts.ch === 2 ? 2 : 1;
+  const ch = opts.ch === 2 || opts.ch === 3 ? opts.ch : 1;
   Object.assign(G, {
-    ch, phase: ch === 2 ? 'glasses' : 'meadow', modal: null, time: 0, view: 0, wipe: null, realT: 0,
+    ch, phase: ch >= 2 ? 'glasses' : 'meadow', modal: null, time: 0, view: 0, wipe: null, realT: 0,
     proof: new Set(), woke: 0, wokePersonal: 0, cred: 3, heat: 0, sheepish: 0, ach: new Set(),
     flags: { retry: !!opts.retry }, timers: [], particles: [], pops: [], cut: null, camTarget: null,
     maxAlert: 0, invuln: 0, woozy: 0, playerDark: 0, rh: null, st: 0, fenceT: 0, disguisesGone: false, shock: null,
@@ -3383,21 +3920,22 @@ function newGame(opts) {
     seenBy: null, hiddenFrom: false, prayHidden: false, church: newChurch(), followCount: 0, endKind: null, interact: null, fade: null, noise: null,
     lick: null, lickDue: 0, lickCd: 0, licksKicked: 0, licksDropped: 0, lickCut: null, studio: newStudio(), camHidden: false, heatLater: false,
   });
-  for (const b of solids) b.on = !b.ch || b.ch === ch;
+  for (const b of solids) b.on = chIn(b.ch, ch);
   G.player = {
     id: 'you', name: 'You', kind: 'player', state: 'woke', x: opts.retry ? 1150 : 600, y: opts.retry ? 800 : 965, vx: 0, vy: 0,
     facing: 1, phase: 0, walk: 0, grazing: false, specsOn: false, hasSpecs: false, bubble: null, scale: 1, hopT: 0, caughtFx: 0,
   };
   G.sheep = SHEEP_DEFS.map(makeSheep);
-  G.wolves = WOLF_DEFS.filter((d) => !d.ch || d.ch === ch).map(makeWolf);
-  G.proofs = (ch === 2 ? PROOF_DEFS2 : PROOF_DEFS).map((p) => Object.assign({}, p, { found: false, ph: Math.random() * 6 }));
+  G.wolves = WOLF_DEFS.filter((d) => chIn(d.ch, ch)).map(makeWolf);
+  G.proofs = (ch === 3 ? [] : ch === 2 ? PROOF_DEFS2 : PROOF_DEFS).map((p) => Object.assign({}, p, { found: false, ph: Math.random() * 6 }));
   G.glasses = { taken: false };
   const last = BFLY_PATH[BFLY_PATH.length - 1];
   G.bfly = opts.retry ? { x: last[0], y: last[1], i: BFLY_PATH.length - 1, gone: false, away: 0 } : { x: 650, y: 935, i: 0, gone: false, away: 0 };
-  WOKE_GOAL = ch === 2 ? 3 : 4; PROOF_COUNT = G.proofs.length;
+  WOKE_GOAL = ch >= 2 ? 3 : 4; PROOF_COUNT = ch === 3 ? WINDOWS3.length : G.proofs.length;
   if (ch === 2) setupCh2();
+  if (ch === 3) setupCh3();
   hudKey = '';
-  setUIMode(ch === 2 ? 'real' : 'candy');
+  setUIMode(ch >= 2 ? 'real' : 'candy');
 }
 
 /* ---------------- physics and sight ---------------- */
@@ -3470,7 +4008,7 @@ function pop(x, y, txt, good) { G.pops.push({ x, y, txt, good, t: 0.9 }); }
 
 /* ---------------- sheep ---------------- */
 function pickWander(s) {
-  const free = G.realT > 0.5 && G.ch !== 2;
+  const free = G.realT > 0.5 && G.ch === 1;
   for (let k = 0; k < 8; k++) {
     const a = Math.random() * TAU, r = Math.random() * s.wander;
     const x = s.hx + Math.cos(a) * r, y = s.hy + Math.sin(a) * r * 0.7;
@@ -3556,7 +4094,7 @@ function updatePlayer(dt) {
   p.grazing = canMove && G.phase !== 'herd' && (keys.has('shift') || touchState.graze);
   if (p.grazing) { ix = 0; iy = 0; }
   let speed = 175;
-  if (G.phase === 'stampede' && G.ch !== 2 && G.st > 1.4) {
+  if (G.phase === 'stampede' && G.ch === 1 && G.st > 1.4) {
     const dx = GATEX - p.x, dy = 1190 - p.y, d = Math.hypot(dx, dy);
     if (d > 6) { ix = dx / d; iy = dy / d; speed = 205; }
   }
@@ -3593,7 +4131,7 @@ function updateWolves(dt) {
     if (G.phase === 'fleecing' && w.alert > 0.35 && (w.sense || 'cone') !== 'sniff') {
       const a = Math.atan2(p.y - w.y, p.x - w.x);
       if (w.type === 'twohead') { const d1 = Math.abs(angDiff(w.dir, a)), d2 = Math.abs(angDiff(w.dir + Math.PI, a)); turnToward(w, d1 <= d2 ? a : a - Math.PI, 3 * dt); }
-      else turnToward(w, a, (w.type === 'tower' ? 1.2 : 3.2) * dt);
+      else turnToward(w, a, (w.type === 'tower' || w.type === 'flood' ? 1.2 : 3.2) * dt);
       w.walk = 0; if (w.type !== 'twohead' && w.type !== 'tower') setFacing(w); continue;
     }
     if (w.id === 'pastor' && G.church.mode !== 'sermon') { turnToward(w, Math.PI / 2, 2.5 * dt); w.walk = 0; continue; }
@@ -3699,7 +4237,7 @@ function detect(dt) {
       if (before < 0.7 && w.alert >= 0.7) { Snd.play('alertX'); makeNoise(p.x, p.y); }
       if (w.id === 'biscuit' && before < 0.5 && w.alert >= 0.5) biscuitBark(w);
       G.seenBy = w;
-      if (w.alert >= 1) { if (w.type === 'crow') { crowReport(w); continue; } if (w.type === 'pig') { retire(w); return; } caught(w); return; }
+      if (w.alert >= 1) { if (G.ch === 3) { caught3(w); return; } if (w.type === 'crow') { crowReport(w); continue; } if (w.type === 'pig') { retire(w); return; } caught(w); return; }
     } else {
       w.alert = Math.max(0, w.alert - 0.42 * dt);
       if (w.sees && sense === 'cone' && p.specsOn && p.grazing) {
@@ -3754,17 +4292,18 @@ function setPhase(p) {
   if (p === 'meadow') {
     if (G.flags.retry) setObjective('The glasses are still in the mud by the fence.', 'Squeeze through the hole in the east fence.');
     else setObjective('Morning at Greener Pastures! Follow the butterfly east.', moveHint());
-  } else if (p === 'glasses') setObjective(G.ch === 2 ? 'Something is off. Put the glasses back on.' : 'Put on the glasses.', touchMode ? 'Tap Glasses.' : 'Press Space.');
+  } else if (p === 'glasses') setObjective(G.ch >= 2 ? 'Something is off. Put the glasses back on.' : 'Put on the glasses.', touchMode ? 'Tap Glasses.' : 'Press Space.');
   else if (p === 'reveal') setObjective('Act natural.', '');
   else if (p === 'fleecing') updateFleeceObjective();
   else if (p === 'herd') setObjective('Herd Mentality!', 'The flock is waking up.');
   else if (p === 'bigbaa') setObjective('Big Baa!', touchMode ? 'Tap Baa when the ring closes.' : 'Press B when the ring closes.');
-  else if (p === 'stampede') setObjective(G.ch === 2 ? 'Run them off!' : 'Stampede!', '');
+  else if (p === 'stampede') setObjective(G.ch === 3 ? 'Let them see.' : G.ch === 2 ? 'Run them off!' : 'Stampede!', '');
   updateTouchButtons();
 }
 function updateFleeceObjective() {
   if (G.phase !== 'fleecing') return;
   if (G.ch === 2) { ch2Objective(); return; }
+  if (G.ch === 3) { ch3Objective(); return; }
   const reg = regionOf(G.player.x, G.player.y), g = G.sheep.find((q) => q.id === 'gerald');
   if (reg === 'acres') {
     if (g && g.follow && g.state !== 'woke') { setObjective("Get Gerald out through Kevin's tunnel.", 'The tunnel is in the northwest corner. Stay out of the light.'); return; }
@@ -3804,7 +4343,7 @@ function updateWipe(dt) {
   const w = G.wipe;
   if (!w) return;
   w.t += dt / w.dur;
-  if (!w.half && w.t >= 0.5) { w.half = true; if (G.ch === 2 || G.realT < 0.5) setUIMode(w.to ? 'truth' : offMode()); }
+  if (!w.half && w.t >= 0.5) { w.half = true; if (G.ch >= 2 || G.realT < 0.5) setUIMode(w.to ? 'truth' : offMode()); }
   if (w.t >= 1) { G.view = w.to; G.wipe = null; }
 }
 function pickupGlasses() {
@@ -3820,7 +4359,7 @@ function updateCut(dt) {
   const wg = G.wolves[0];
   if (c.stage === 'wipe') { if (!G.wipe && c.t > 0.8) { c.stage = 'pan'; c.t = 0; G.camTarget = { x: wg.x, y: wg.y - 40 }; } }
   else if (c.stage === 'pan') { if (c.t > 1.5) { c.stage = 'talk'; openRevealDialog(); } }
-  else if (c.stage === 'pan2') { if (c.t > 1.7) { c.stage = 'talk2'; openRevealDialog2b(); } }
+  else if (c.stage === 'pan2') { if (c.t > 1.7) { c.stage = 'talk2'; if (G.ch === 3) openRevealDialog3b(); else openRevealDialog2b(); } }
   else if (c.stage === 'back') {
     G.camTarget = null;
     if (c.t > 1.0) {
@@ -3831,6 +4370,7 @@ function updateCut(dt) {
 }
 function openRevealDialog() {
   if (G.ch === 2) { openRevealDialog2(); return; }
+  if (G.ch === 3) { openRevealDialog3(); return; }
   const sys = 'Through the glasses';
   openDialog({ who: 'system', name: sys, text: 'The shepherd waving from the hill is a wolf in a straw hat.', choices: [{ label: 'Continue', run: () => ({
     who: 'system', name: sys, text: "He's waving at you. Wave back. Act natural.", choices: [{ label: 'Wave back', run: () => {
@@ -3881,7 +4421,7 @@ function findInteract() {
   }
   if (G.phase === 'meadow' || G.phase === 'fleecing' || (G.phase === 'herd' && reg !== 'ranch')) {
     for (const pt of PORTALS) {
-      if (pt.region !== reg || (pt.ch && pt.ch !== G.ch) || (pt.truthOnly && !(p.specsOn && G.view === 1))) continue;
+      if (pt.region !== reg || !chIn(pt.ch, G.ch) || (pt.truthOnly && !(p.specsOn && G.view === 1))) continue;
       const d = dist(p.x, p.y, pt.x, pt.y);
       if (d < pt.r && d - 12 < bd) { bd = d - 12; best = { kind: 'portal', ref: pt, x: pt.x, y: pt.y - 44, label: G.view && pt.labelTruth ? pt.labelTruth : pt.label }; }
     }
@@ -3890,10 +4430,13 @@ function findInteract() {
   if (lk) best = lk;
   const rk = rackInteract();
   if (rk) best = rk;
+  const c3 = ch3Interact(best);
+  if (c3) best = c3;
   return best;
 }
 function doInteract(it) {
   if (it.kind === 'rack') { chewRack(); return; }
+  if (it.kind === 'window' || it.kind === 'farmer') { ch3Use(it); return; }
   if (it.kind === 'lick') { kickLick(); return; }
   if (it.kind === 'portal') usePortal(it.ref);
   else if (it.kind === 'dog') talkToDog(it.ref);
@@ -3902,6 +4445,7 @@ function doInteract(it) {
 function usePortal(pt) {
   const dest = PORTALS.find((q) => q.id === pt.to);
   if (!dest || G.fade) return;
+  if (pt.locked && pt.locked()) { lockedDoor(pt); return; }
   Snd.play(pt.id.indexOf('tunnel') === 0 ? 'dig' : 'door');
   G.fade = { t: 0, dur: 0.8, fired: false, mid: () => doTeleport(dest) };
 }
@@ -3926,6 +4470,8 @@ function onEnterRegion(reg, dest) {
     enterChurch();
   } else if (reg === 'studio') {
     enterStudio();
+  } else if (reg === 'hill' || reg === 'house') {
+    enterRegion3(reg);
   } else if (reg === 'farm') {
     if (!G.flags.visitedFarm) { G.flags.visitedFarm = true; banner(G.view ? 'Pig HQ' : 'The Farmhouse', G.view ? 'The Board is in session. Pigs notice anything that moves.' : 'It smells like a barn in here. A very expensive barn.', 3); }
   } else {
@@ -3945,6 +4491,7 @@ function talkTo(s) {
   s.facing = G.player.x > s.x ? 1 : -1; s.grazing = false; s.idle = Math.max(s.idle, 2);
   let node;
   if (G.ch === 2 && !(s.sulk > 0)) { openDialog(ch2TalkNode(s)); return; }
+  if (G.ch === 3) { openDialog(ch3TalkNode(s)); return; }
   if (s.lure) node = { who: s, text: pick(LURE_TALK) };
   else if (s.id === 'bellwether' && s.state !== 'woke' && studioLive()) node = { who: s, text: pick(ONAIR_TALK) };
   else if (s.sulk > 0) node = { who: s, text: pick(["Hmph. I'm not talking to you right now.", 'Hmph. Still thinking about what you said. Go away.', 'Hmph. Ask me later.']) };
@@ -4041,7 +4588,7 @@ function loseCred(msg) {
   G.cred = Math.max(0, G.cred - 1);
   Snd.play('bonk'); addShake(7); syncHUD();
   toast('Credibility -1', msg);
-  if (G.cred <= 0) G.pendingEnd = G.ch === 2 ? 'retired' : 'counted';
+  if (G.cred <= 0) G.pendingEnd = G.ch === 3 ? 'farmhand' : G.ch === 2 ? 'retired' : 'counted';
 }
 function wakeSheep(s, counts) {
   if (s.state === 'woke') return;
@@ -4137,7 +4684,7 @@ function startBigBaa() {
   G.rh = { t: 0, start: 1.8, iv: 0.6, last: -1, hit: -99, vol: 0, done: false };
   ui.rhythm.hidden = false; ui.rhythmFill.style.width = '0%';
   ui.rhythmHint.textContent = touchMode ? 'Tap Baa when the ring closes' : 'Press B or Space when the ring closes';
-  banner('Big Baa!', (G.ch === 2 ? 'Drown out the Chairman. ' : '') + (touchMode ? 'Tap Baa on the beat.' : 'Press B on the beat.'), 2.2);
+  banner('Big Baa!', (G.ch === 3 ? 'Blow his hat off. ' : G.ch === 2 ? 'Drown out the Chairman. ' : '') + (touchMode ? 'Tap Baa on the beat.' : 'Press B on the beat.'), 2.2);
   Snd.setMode('quiet');
   G.player.vx = G.player.vy = 0;
 }
@@ -4170,6 +4717,7 @@ function rhythmPress() {
 }
 function startStampede() {
   if (G.ch === 2) { startPigRout(); return; }
+  if (G.ch === 3) { startFarmerReveal(); return; }
   setPhase('stampede');
   G.st = 0; ui.rhythm.hidden = true;
   G.disguisesGone = true; G.flash = 0.9; G.flashColor = '255,255,255'; addShake(16);
@@ -4187,6 +4735,7 @@ function startStampede() {
 }
 function updateStampede(dt) {
   if (G.ch === 2) { updatePigRout(dt); return; }
+  if (G.ch === 3) { updateFarmerReveal(dt); return; }
   const st = (G.st += dt);
   if (G.shock) { G.shock.t += dt; if (G.shock.t > 1.3) G.shock = null; }
   for (const w of G.wolves) {
@@ -4252,6 +4801,7 @@ function talkToDog(w) {
   openDialog(dogNode(w));
 }
 function dogNode(w) {
+  if (w.ally && G.ch === 3) return { who: w, text: pick(DOG3_LINES) };
   if (w.ally && G.ch === 2) return { who: w, text: pick(DOG2_LINES) };
   if (w.ally) return { who: w, text: pick(["Sgt. Biscuit, reporting for the resistance! I'll keep the shepherds busy.", 'If a shepherd spots you, I bark. Squirrel trick. Works every time.', 'I walked them to the gate. Every one. Never again.']) };
   const ch = [{ label: 'Ask a question', run: () => ({ who: 'player', name: 'You', text: 'Where do the old sheep go?', choices: [{ label: 'Listen', run: () => {
@@ -4318,7 +4868,7 @@ function updateChurch(dt) {
   for (const s of G.sheep) {
     if (s.home !== 'church' || s.run || s.follow || s.panic > 0) continue;
     if (s.walk < 0.15) s.facing = s.id === 'ewenice' ? -1 : s.x < NAVE.aisle ? 1 : -1;
-    if (s.state === 'asleep' || (G.ch === 2 && s.home === 'church')) { s.grazing = praying; s.grazeIdle = praying; }
+    if (s.state === 'asleep' || (G.ch >= 2 && s.home === 'church')) { s.grazing = praying; s.grazeIdle = praying; }
   }
   for (const s of G.sheep) if (s.leaving && s.y > 2200 && Math.abs(s.x - NAVE.aisle) < 70) exitChurch(s, true);
   const inside = regionOf(p.x, p.y) === 'church';
@@ -4337,16 +4887,22 @@ function updateChurch(dt) {
       if (!C.prayers && G.phase === 'fleecing') banner('Every head bowed!', (touchMode ? 'Hold Bow' : 'Hold Shift') + ' to bow your head until the pastor says "Amen."', 3.2);
     }
   } else if (C.mode === 'warn') {
-    if (C.t >= C.warn) { C.mode = 'pray'; C.t = 0; C.prayers++; if (pastor) say(pastor, 'Every head bowed. Every eye closed.', 3.4); }
+    if (C.t >= C.warn) { C.mode = 'pray'; C.t = 0; C.prayers++; C.fleece = !p.specsOn; if (pastor) say(pastor, 'Every head bowed. Every eye closed.', 3.4); }
   } else {
+    if (p.specsOn) C.fleece = false;
     C.tuftT -= dt;
     if (C.tuftT <= 0 && usher) {
       C.tuftT = 0.3;
-      const s = pick(G.sheep.filter((q) => q.home === 'church' && (q.state === 'asleep' || G.ch === 2) && q.grazing && dist(q.x, q.y, usher.x, usher.y) < 520));
+      // with the glasses off you never see your own wool go into the plate
+      if (C.fleece && p.grazing && Math.random() < 0.5) spawn({ type: 'wool', mode: 'truth', x: p.x + rand(-8, 8), y: p.y - 30, vx: (usher.x + 6 - p.x) / 1.1, vy: (usher.y - 36 - p.y + 30) / 1.1, life: 1.1, size: rand(2.6, 4.2) });
+      const s = pick(G.sheep.filter((q) => q.home === 'church' && (q.state === 'asleep' || G.ch >= 2) && q.grazing && dist(q.x, q.y, usher.x, usher.y) < 520));
       if (s) spawn({ type: 'wool', mode: 'truth', x: s.x + rand(-8, 8), y: s.y - 30, vx: (usher.x + 6 - s.x) / 1.1, vy: (usher.y - 36 - s.y + 30) / 1.1, life: 1.1, size: rand(2.6, 4.2) });
     }
     if (usher && !usher.bubble && C.t > 0.8 && Math.random() < dt * 0.5) say(usher, pick(PLATE_LINES), 1.8);
-    if (C.t >= 4.6) { C.mode = 'sermon'; C.t = 0; C.len = rand(9, 12); C.talkT = 1.6; if (pastor) say(pastor, 'Amen!', 1.4); Snd.play('amen'); }
+    if (C.t >= 4.6) {
+      C.mode = 'sermon'; C.t = 0; C.len = rand(9, 12); C.talkT = 1.6; if (pastor) say(pastor, 'Amen!', 1.4); Snd.play('amen');
+      if (C.fleece && G.phase === 'fleecing') { C.fleece = false; unlock('fleeced'); later(1.2, () => toast('Your fleece feels a little lighter', 'Funny. You never saw the plate.')); }
+    }
   }
 }
 function enterChurch() {
@@ -4425,8 +4981,8 @@ function exitChurch(s, puff, atDoor) {
 
 /* ---------------- Chapter 2: story and systems ---------------- */
 const CH2_PARAM = /[?&]chapter=2\b/.test(location.search);
-function ch2Unlocked() { const s = store.get(); return !!(s.ch2 || s.best) || CH2_PARAM; }
-function offMode() { return G.ch === CH2 ? 'real' : 'candy'; }
+function ch2Unlocked() { const s = store.get(); return !!(s.ch2 || s.best) || CH2_PARAM || CH3_PARAM; }
+function offMode() { return G.ch >= 2 ? 'real' : 'candy'; }
 function say2(e, real, truth, dur) { e.bubble = { text: real, alt: truth, t: dur || 2 }; }
 const bubbleText = (b) => (b.alt && (isTruthPass() || G.disguisesGone) ? b.alt : b.text);
 function wolfTop(w, mark) {
@@ -4434,6 +4990,10 @@ function wolfTop(w, mark) {
   if (w.type === 'camera') return mark ? 52 : 44;
   if (w.type === 'pastor') return mark ? 124 : 112;
   if (w.type === 'crow') return mark ? 82 : 74;
+  if (w.type === 'hound') return mark ? 56 : 48;
+  if (w.type === 'scarecrow') return mark ? 110 : 100;
+  if (w.type === 'flood') return mark ? 158 : 148;
+  if (w.type === 'farmer') return ch3Truth() ? (mark ? 84 : 76) : mark ? 106 : 98;
   if (w.type === 'pig') { const tr = ch2Truth(), k = w.role === 'chairman' ? 1.12 : 1; return (tr ? (mark ? 100 : 92) : mark ? 60 : 52) * k; }
   return mark ? 100 : 92;
 }
@@ -4833,7 +5393,7 @@ function lickPathClear(x0, y0, x1, y1) {
 // true if a sign, building or tree drawn after the lick would cover it
 function lickHidden(x, y) {
   for (const d of STATIC) {
-    if (d.ch && d.ch !== G.ch) continue;
+    if (!chIn(d.ch, G.ch)) continue;
     if (d.y > y && d.x0 < x + 46 && d.x1 > x - 20 && d.y0 < y + 4 && d.y1 > y - 52) return true;
   }
   return false;
@@ -5300,13 +5860,391 @@ addStatic(2530, 226, 2410, 1174, 2540, drawStudioBackWall);
 addStatic(NEWSDESK.y1, NEWSDESK.x0 - 8, NEWSDESK.y0 - 40, NEWSDESK.x1 + 8, NEWSDESK.y1 + 8, drawNewsDesk);
 addStatic(2954, 226, 2890, 1174, 2956, drawStudioFrontWall);
 
+/* ---------------- Chapter 3: story and systems ---------------- */
+function ch3Unlocked() { const s = store.get(); return !!s.best2 || CH3_PARAM; }
+const BELL3_LINE = "I read A Message From The Farmer every day at noon. Nobody slips me cue cards anymore. They come on tape.";
+
+/* setting up a chapter 3 run */
+function setupCh3() {
+  const p = G.player;
+  p.x = 640; p.y = 944; p.hasSpecs = true; p.specsOn = false; p.hat = false;
+  G.glasses.taken = true; G.bfly.gone = true; G.realT = 1; G.playerDark = 0.72; G.view = 0;
+  G.c3 = { chatT: 2, marchT: 1, revT: 0 };
+  for (const s of G.sheep) {
+    s.state = 'woke'; s.deep = false; s.protest = false; s.shown = new Set();
+    const h = CH2_HOMES[s.id];
+    if (h) { s.x = s.hx = s.tx = h[0]; s.y = s.hy = s.ty = h[1]; s.home = h[2]; s.wander = 22; }
+  }
+  for (const w of G.wolves) {
+    w.rest = 0; w.flying = false; w.fleeing = false; w.speech = false;
+    if (w.id === 'wolfgang') w.waving = false;
+    if (w.id === 'biscuit') { w.ally = true; w.active = true; }
+    else if (!CH3_TYPES.has(w.type) && w.type !== 'pig') w.limp = true; // the wolves nap where their strings dropped them
+  }
+  G.church.ewenice = true; G.church.walkout = true;
+}
+function startChapter3() {
+  newGame({ ch: CH3 });
+  startPlay();
+  later(0.5, openCh3Intro);
+}
+function openCh3Intro() {
+  const nm = 'Chapter 3: The Farmer';
+  openDialog({ who: 'system', name: nm, text: 'One week after the pigs ran. The wolves are napping where their strings dropped them. The pigs moved up the hill, to the Big House, to work for the Farmer.', choices: [{ label: 'Continue', run: () => ({
+    who: 'system', name: nm, text: "Nobody has ever seen the Farmer. But every day at noon there's A Message From The Farmer, and every sign on the farm has his name on it. Everybody loves him. Everybody except you.", choices: [{ label: 'Something is off' }],
+  }) }] });
+}
+
+/* the reveal: everything is his, and his house is up the hill */
+function openRevealDialog3() {
+  openDialog({ who: 'system', name: 'Through the glasses', text: 'Shepherd Wolfgang is still napping where his strings dropped him. But there is a new tag on his collar. On every sign, every trough, every fence post, the same tag: PROPERTY OF THE FARMER.', choices: [{ label: 'Look up the hill', run: () => {
+    G.fade = { t: 0, dur: 0.9, fired: false, mid: () => { G.camTarget = { x: BIGH.door, y: 3330 }; updateCamera(0, true); if (G.cut) { G.cut.stage = 'pan2'; G.cut.t = 0; } } };
+    return null;
+  } }] });
+}
+function openRevealDialog3b() {
+  const freeze = touchMode ? 'hold Graze' : 'hold Shift';
+  openDialog({ who: 'system', name: 'Through the glasses', text: 'Up the hill stands the Big House. Every light on. Every curtain shut. The pigs went in there, and nobody has seen them come out.', choices: [{ label: 'Continue', run: () => ({
+    who: 'system', name: 'Seeing is believing', text: "Your friends love the Farmer. They won't take your word for it this time: they have to see it with their own eyes. Take them up the hill to the windows. Up there, hounds sniff out anything that moves (" + freeze + ' to freeze), scarecrows notice glasses, and a searchlight never stops turning.',
+    choices: [{ label: 'Got it', run: () => {
+      G.fade = { t: 0, dur: 0.9, fired: false, mid: () => { G.camTarget = null; updateCamera(0, true); if (G.cut) { G.cut.stage = 'back'; G.cut.t = 0; } } };
+      return null;
+    } }],
+  }) }] });
+}
+
+/* objectives */
+const tagger = () => G.sheep.find((s) => s.follow && LINES3[s.id] && !s.deep);
+function ch3Objective() {
+  const reg = regionOf(G.player.x, G.player.y), key = touchMode ? 'Graze' : 'Shift';
+  if (G.flags.march) {
+    if (reg === 'house') setObjective(G.flags.metFarmer ? 'Talk to the Farmer.' : 'Find the Farmer. His study is at the back.', 'The hounds notice anything that moves. Hold ' + key + ' to freeze.');
+    else if (reg === 'hill') setObjective('The whole flock is at the door.', 'The Big House is open. Go in and meet the Farmer.');
+    else setObjective('The whole flock went up the hill.', 'The hill road starts outside the main gate.');
+    return;
+  }
+  const tag = tagger();
+  if (tag) {
+    const wd = WINDOWS3.find((q) => q.id === LINES3[tag.id].win), pron = LINES3[tag.id].pron;
+    if (reg === 'hill') setObjective('Show ' + tag.name + ' ' + wd.name + '.', 'Stand at the window with ' + pron + ' right behind you.');
+    else if (reg === 'ranch') setObjective('Take ' + tag.name + ' up the hill.', 'Squeeze out through the hole in the east fence. The hill road starts outside the main gate.');
+    else setObjective(tag.name + ' is following you.', 'Take ' + pron + ' up the hill, to ' + wd.name + '.');
+    return;
+  }
+  if (reg === 'hill') {
+    setObjective(G.proof.size >= WINDOWS3.length ? "You've seen through every window." : 'Look through the windows of the Big House.', 'Glasses on to see past the curtains. Scarecrows notice glasses. Hounds notice movement. Nobody hides from the light.');
+    return;
+  }
+  if (reg === 'church') { setObjective('The pastor is napping mid-sermon.', 'Nobody in here needs waking today.'); return; }
+  const need = Math.max(0, WOKE_GOAL - G.woke);
+  setObjective('Bring ' + need + ' more ' + (need === 1 ? 'friend' : 'friends') + ' up the hill to see for themselves.', G.hint || 'Ask your friends about the Farmer. Nobody has ever seen him.');
+}
+
+/* talking, chapter 3 */
+function ch3TalkNode(s) {
+  if (LINES3[s.id]) return ch3Node(s);
+  if (s.kind === 'kevin') return kevin3Node(s);
+  if (s.kind === 'lamb') return { who: s, text: LAMB3_LINE };
+  if (s.kind === 'gerald') return { who: s, text: pick(GERALD3_LINES) };
+  if (s.id === 'bellwether') return { who: s, text: BELL3_LINE };
+  if (G.player.specsOn && Math.random() < 0.5) return { who: s, text: pick(FLOCK3_SPECS), choices: [{ label: 'Baa' }] };
+  return { who: s, text: FLOCK3_LINES[(s.def.line !== undefined ? s.def.line : idHash(s.id)) % FLOCK3_LINES.length], choices: [{ label: 'Baa' }] };
+}
+function ch3Node(s, txt) {
+  const L = LINES3[s.id], wd = WINDOWS3.find((q) => q.id === L.win);
+  if (s.deep) return { who: s, text: L.done };
+  const ch = [];
+  ch.push({ label: 'Ask a question', run: () => ({ who: 'player', name: 'You', text: L.ask, choices: [{ label: 'Listen', run: () => {
+    G.hint = L.hint; G.hintFor = s.id; updateFleeceObjective();
+    return { who: s, text: L.reply, choices: [{ label: 'Go on', run: () => ch3Node(s, L.prompt) }] };
+  } }] }) });
+  if (G.proof.has(L.win)) ch.push({ label: 'Tell ' + L.pron + ' what you saw', tag: 'Through ' + wd.name, run: () => {
+    G.hint = L.hint; G.hintFor = s.id; updateFleeceObjective();
+    return { who: s, text: L.told, choices: [{ label: 'Go on', run: () => ch3Node(s, L.prompt) }] };
+  } });
+  if (s.follow) ch.push({ label: 'Wait here', tag: 'Stops following you', run: () => { G.afterDialog = () => stopTagging(s); return { who: s, text: "I'll be right here. Don't be long.", choices: [{ label: 'Okay' }] }; } });
+  else ch.push({ label: 'Come up the hill with me', tag: 'Show ' + L.pron + ' ' + wd.name, run: () => { G.afterDialog = () => tagAlong(s); return { who: s, text: L.follow, choices: [{ label: "Let's go" }] }; } });
+  if (G.phase === 'fleecing') ch.push({ label: 'Yell "FARMER!"', run: () => { G.afterDialog = () => { unlock('cried3'); loseCred('Nobody believes the sheep who cried Farmer.'); }; return { who: s, text: L.farmer, choices: [{ label: 'Oops' }] }; } });
+  ch.push({ label: 'Leave', leave: true });
+  return { who: s, text: txt || (s.follow ? "Lead the way. I'm right behind you." : L.intro), choices: ch };
+}
+function kevin3Node(s) {
+  if (s.deep) return { who: s, text: pick(KEVIN3.done) };
+  const ch = [];
+  if (G.phase === 'fleecing') ch.push({ label: 'Tell him about the Farmer', tag: 'Eyewitnesses +1, but Credibility -1', run: () => {
+    G.afterDialog = () => { convince3(s); loseCred('Kevin is telling everyone the Farmer is a combine harvester.'); };
+    return { who: s, text: KEVIN3.join, choices: [{ label: 'Please leave out the combine harvester' }] };
+  } });
+  ch.push({ label: 'Leave', leave: true });
+  return { who: s, text: KEVIN3.intro, choices: ch };
+}
+function tagAlong(s) {
+  startFollowing(s); s.idle = 0; s.sulk = 0;
+  const L = LINES3[s.id], wd = WINDOWS3.find((q) => q.id === L.win);
+  toast(s.name + ' is following you', 'Take ' + L.pron + ' up the hill to ' + wd.name + '.');
+  updateFleeceObjective();
+}
+function stopTagging(s) {
+  s.follow = false; s.hx = s.tx = s.x; s.hy = s.ty = s.y; s.idle = rand(1, 3);
+  updateFleeceObjective();
+}
+
+/* the windows */
+function ch3Interact() {
+  if (G.ch !== CH3 || G.phase !== 'fleecing') return null;
+  const p = G.player, reg = regionOf(p.x, p.y);
+  if (reg === 'house') {
+    const f = G.wolves.find((w) => w.id === 'farmer');
+    if (f && f.active && p.y < HOUSE.wallY && dist(p.x, p.y, f.x, f.y) < 110) return { kind: 'farmer', ref: f, x: f.x, y: f.y - wolfTop(f) - 6, label: 'Talk to the Farmer' };
+    return null;
+  }
+  if (reg !== 'hill' || G.flags.march || Math.abs(p.y - WIN_Y) > 36) return null;
+  const wd = WINDOWS3.find((q) => Math.abs(q.x - p.x) < 36);
+  if (!wd) return null;
+  const friend = G.sheep.find((s) => s.follow && !s.deep && LINES3[s.id] && LINES3[s.id].win === wd.id && dist(s.x, s.y, p.x, p.y) < 170);
+  if (friend) return { kind: 'window', ref: wd, friend, x: wd.x, y: WIN_Y - 112, label: 'Show ' + friend.name + ' this window' };
+  return { kind: 'window', ref: wd, x: wd.x, y: WIN_Y - 112, label: G.player.specsOn && G.view === 1 ? 'Look through the window' : 'Peek at the curtains' };
+}
+function ch3Use(it) {
+  if (it.kind === 'farmer') { talkFarmer(it.ref); return; }
+  if (it.friend) showFriendWindow(it.ref, it.friend); else peekWindow(it.ref);
+}
+function sawWindow(wd) {
+  if (G.proof.has(wd.id)) return false;
+  G.proof.add(wd.id); syncHUD();
+  if (G.proof.size >= WINDOWS3.length) unlock('peeper');
+  return true;
+}
+function peekWindow(wd) {
+  const p = G.player;
+  if (!(p.specsOn && G.view === 1)) { toast('Lace curtains', 'Very tasteful. The glasses would see past them.'); Snd.play('click'); return; }
+  Snd.play('proof');
+  showDoc(wd, () => {
+    if (sawWindow(wd)) {
+      const who = G.sheep.find((s) => LINES3[s.id] && LINES3[s.id].win === wd.id);
+      toast('You saw ' + wd.name, G.proof.size + ' of ' + WINDOWS3.length + ' windows. ' + (who ? who.name + ' should see this.' : ''));
+    }
+    updateFleeceObjective();
+  });
+}
+function showFriendWindow(wd, s) {
+  const L = LINES3[s.id], subj = L.pron === 'him' ? 'He' : 'She';
+  Snd.play('proof');
+  s.facing = wd.x > s.x ? 1 : -1;
+  sawWindow(wd);
+  openDialog({ who: 'system', name: 'At ' + wd.name, text: 'You hand ' + s.name + ' your glasses and lift the hem of the curtain. ' + subj + ' looks for a long, long time.', choices: [{ label: 'Continue', run: () => ({
+    who: s, text: L.yes, choices: [{ label: 'Seeing is believing' }],
+  }) }] });
+  G.afterDialog = () => convince3(s);
+}
+function lockedDoor() {
+  Snd.play('click');
+  toast('The door is locked', G.view ? 'A little brass sign: NO VISITORS. HE ALREADY KNOWS WHAT YOU WANT.' : 'A little brass sign: THE FARMER IS BUSY. THANK YOU FOR YOUR PATIENCE.');
+}
+
+/* convincing, chapter 3: one at a time, at the window */
+function goHome3(s) {
+  const h = CH2_HOMES[s.id], hx = h ? h[0] : s.def.x, hy = h ? h[1] : s.def.y;
+  s.run = null; s.follow = false; s.x = s.hx = s.tx = hx; s.y = s.hy = s.ty = hy; s.home = 'ranch'; s.wander = 22; s.idle = rand(1, 2);
+}
+function convince3(s) {
+  if (s.deep) return;
+  s.deep = true; s.wakeFx = 1.4; s.hopT = 1; s.sulk = 0;
+  Snd.play('wake');
+  for (let i = 0; i < 14; i++) spawn({ type: 'star', x: s.x, y: s.y - 30, vx: rand(-120, 120), vy: rand(-160, -40), g: 260, life: 0.8, size: rand(3, 6) });
+  if (G.hintFor === s.id) { G.hint = ''; G.hintFor = null; }
+  if (s.follow) {
+    s.follow = false;
+    if (regionOf(s.x, s.y) === 'hill') later(1.4, () => { if (!G.flags.march) s.run = { x: 750, y: 3870, speed: 120, then: goHome3 }; });
+  }
+  G.woke++; G.wokePersonal++; syncHUD();
+  if (G.phase !== 'fleecing') return;
+  if (G.woke >= WOKE_GOAL) { later(1.2, startMarch3); return; }
+  G.heat = G.woke;
+  if (G.woke === 1) banner('Somebody saw something', 'The hounds are pacing faster.', 2.6);
+  else banner('The Big House is nervous', 'The searchlight is turning faster.', 2.6);
+  updateFleeceObjective();
+}
+
+/* getting caught up the hill: the hounds carry you down, very politely */
+const HOUND_CAUGHT = [
+  'Hrrmf. (The hound picks you up by the scruff, very gently, and carries you all the way down the hill.)',
+  "*sniff* Hrrmf. (The Farmer says no visitors. The hound says it with his eyes. Then he carries you down the hill.)",
+];
+function caught3(w) {
+  Snd.play('caught'); addShake(10); G.flash = 0.6; G.flashColor = '200,40,40';
+  for (const o of G.wolves) o.alert = 0;
+  G.player.caughtFx = 1.2;
+  const reg = regionOf(w.x, w.y);
+  const hound = w.type === 'hound' ? w : G.wolves.find((q) => q.type === 'hound' && q.active && regionOf(q.x, q.y) === reg) || w;
+  const walk = { who: hound, text: pick(HOUND_CAUGHT), choices: [{ label: 'Shake it off' }] };
+  const first = w.type === 'scarecrow' ? { who: w, text: '*click whirr* (The scarecrow turns its head all the way around. Somewhere in the Big House, a little bell rings.)' }
+    : w.type === 'flood' ? { who: 'system', name: 'The searchlight', text: 'The searchlight stops on you and stays there. Somewhere in the Big House, a little bell rings.' }
+      : w.type === 'pig' ? { who: w, text: "OINK! ...Sorry. Old habits. The Farmer doesn't take visitors. HOUNDS!" } : null;
+  if (first) { first.choices = [{ label: 'Uh oh', run: () => walk }]; openDialog(first); } else openDialog(walk);
+  G.afterDialog = afterCaught3;
+}
+function afterCaught3() {
+  const p = G.player, to = G.flags.march ? [BIGH.door, 3570] : [604, 1206];
+  let i = 0;
+  for (const s of G.sheep) if (s.follow) { s.x = to[0] + (i % 2 ? 30 : -30); s.y = to[1] + 26 + i * 8; i++; }
+  p.x = to[0]; p.y = to[1]; p.vx = p.vy = 0; p.specsOn = false; p.grazing = false;
+  G.wipe = null; G.view = 0; setUIMode(offMode()); Snd.setMode(offMode());
+  G.woozy = 2; G.invuln = 2.5;
+  updateCamera(0, true);
+  loseCred(G.flags.march ? 'The hounds put you out with the rest of the flock.' : 'The whole flock saw a hound carry you home.');
+  updateFleeceObjective();
+}
+function enterRegion3(reg) {
+  if (reg === 'hill') {
+    if (G.flags.march) toast('The Big House', 'The flock is waiting at the door.');
+    else if (!G.flags.visitedHill) { G.flags.visitedHill = true; banner(G.view ? 'Head Office' : 'The Big House', 'Hounds sniff anything that moves. Scarecrows notice glasses. Nobody hides from the light.', 3.4); }
+    else toast('The Big House', 'Mind the searchlight.');
+  } else if (reg === 'house' && !G.flags.visitedHouse) {
+    G.flags.visitedHouse = true;
+    banner(G.view ? 'Management' : 'The Big House', "The Farmer's study is at the back. The hounds notice anything that moves.", 3.2);
+  }
+}
+
+/* the finale: the whole flock climbs the hill */
+function crowdSpot(i) { const col = i % 8, row = Math.floor(i / 8); return [516 + col * 66 + (row % 2) * 33, 3428 + row * 42]; }
+function startMarch3() {
+  if (G.flags.march) return;
+  G.flags.march = true;
+  banner('Seeing is believing!', 'The whole flock is climbing the hill.', 3.2);
+  Snd.play('fanfare');
+  // the yard goes quiet: the hounds sit on the porch, and the scarecrows and the light are just for show now
+  for (const w of G.wolves) {
+    if (regionOf(w.x, w.y) !== 'hill') continue;
+    if (w.type === 'hound') { const s = w.id === 'duke' ? -1 : 1; w.x = BIGH.door + s * 120; w.y = 3312; w.behavior = 'sit'; w.sitting = true; w.facing = -s; w.distracted = 1e9; w.alert = 0; }
+    else { w.rest = 1e9; w.alert = 0; }
+  }
+  const crowd = G.sheep.filter((s) => s.home === 'ranch' && s.state === 'woke' && !s.run && ['ranch', 'hill'].indexOf(regionOf(s.x, s.y)) >= 0)
+    .sort((a, b) => (b.deep ? 1 : 0) - (a.deep ? 1 : 0));
+  crowd.forEach((s, i) => {
+    const spot = crowdSpot(i);
+    later(0.3 + i * 0.2, () => {
+      s.follow = false; s.protest = true; s.sulk = 0;
+      if (regionOf(s.x, s.y) !== 'hill') { s.x = 750 + rand(-24, 24); s.y = 3880; }
+      s.run = { x: spot[0], y: spot[1], speed: 130, then: (q) => { q.home = 'hill'; q.wander = 6; q.idle = rand(0.5, 1.5); q.facing = q.x < BIGH.door ? 1 : -1; } };
+    });
+  });
+  if (regionOf(G.player.x, G.player.y) !== 'hill') later(1.6, () => toast('The flock is climbing the hill', 'Follow them up to the Big House.'));
+  updateFleeceObjective();
+}
+
+/* the Farmer */
+function talkFarmer(f) {
+  const p = G.player;
+  f.facing = p.x > f.x ? 1 : -1;
+  G.flags.metFarmer = true; updateFleeceObjective();
+  if (!(p.specsOn && G.view === 1)) {
+    openDialog({ who: f, text: "Well, now. Come in, come in. Close the door. Mind the hat rack. You must be the one with the glasses. Everybody's talking about you. You can take them off in here. Nothing to see.", choices: [
+      { label: 'Put the glasses on', run: () => { G.afterDialog = () => { setSpecs(true); later(0.9, () => { if (!G.modal) talkFarmer(f); }); }; return null; } },
+      { label: 'Leave', leave: true }] });
+    return;
+  }
+  const nm = 'Through the glasses';
+  openDialog({ who: f, text: 'Come in. Close the door. Mind the hat rack. Took you long enough. They always stop and look through the windows first.', choices: [{ label: 'Continue', run: () => ({
+    who: 'system', name: nm, text: 'Through the glasses, the Farmer is a sheep. An old ram, black as a coal scuttle, in overalls and a straw hat. He wears glasses too. His ear tag says #0001.', choices: [{ label: "You're a SHEEP?", run: () => ({
+      who: f, text: 'Was. Then one morning I found a pair of glasses in the mud by the east fence. Sound familiar? I woke the flock. Ran off the shepherds. Tore down the fence.', choices: [{ label: 'And then?', run: () => ({
+        who: f, text: 'And then the whole flock turned around and asked me what to do next. Every morning. Where to graze. What to think. So I built them a fence. Hired some wolves to be scared of. Some pigs to blame. Everybody was happier. Even the wolves.', choices: [{ label: 'The glasses...', run: () => ({
+          who: f, text: 'I make those. One pair every few years, in the mud by the east fence. Somebody restless always finds them. They topple the wolves. They topple the pigs. They climb the hill. And then they get this.', choices: [{ label: 'Continue', run: () => ({
+            who: 'system', name: nm, text: 'He holds out his straw hat. Behind him, past the curtains, you can hear the flock outside, waiting.', choices: [
+              { label: 'Take the hat', tag: 'Somebody has to run the farm', run: () => takeHat(f) },
+              { label: 'Open the curtains', tag: 'Let the flock see him', run: () => openCurtains(f) },
+            ] }) }] }) }] }) }] }) }] }) }] });
+}
+function takeHat(f) {
+  G.afterDialog = () => {
+    unlock('hat'); f.hatOff = true; G.player.hat = true; G.player.hopT = 1; Snd.play('ach');
+    later(1.1, () => { if (!G.flags.ended) { G.flags.ended = true; endGame('shepherd'); } });
+  };
+  return { who: f, text: "Good. It fits. Breakfast is at six. They'll want to know what to think by seven. The glasses go in the mud by the east fence. Not too deep.", choices: [{ label: 'Put on the hat' }] };
+}
+function openCurtains(f) {
+  G.afterDialog = () => porchScene(f);
+  return { who: f, text: "...Suit yourself. They won't like what they see. They never do.", choices: [{ label: 'Open the curtains' }] };
+}
+function porchScene(f) {
+  G.flags.curtains = true; Snd.play('door');
+  G.fade = { t: 0, dur: 1.4, fired: false, mid: () => {
+    const p = G.player;
+    p.x = BIGH.door + 30; p.y = 3310; p.vx = p.vy = 0; p.grazing = false; p.facing = -1;
+    f.x = BIGH.door - 30; f.y = 3308; f.facing = 1; f.dir = Math.PI / 2; f.bubble = null;
+    for (const s of G.sheep) if (s.protest) { s.run = null; s.facing = s.x < BIGH.door ? 1 : -1; s.idle = 99; s.grazeIdle = false; s.grazing = false; }
+    G.flags.porch = true; G.invuln = 99;
+    updateCamera(0, true);
+    later(0.5, () => say(f, 'Now, now. Back to grazing, everybody.', 2));
+    later(1.1, () => startBigBaa());
+  } };
+}
+
+/* the Big Baa on the porch: off comes the hat */
+function startFarmerReveal() {
+  setPhase('stampede');
+  G.st = 0; ui.rhythm.hidden = true;
+  G.disguisesGone = true; G.flags.revealed = true; G.flash = 0.9; G.flashColor = '255,255,255'; addShake(16);
+  G.shock = { x: G.player.x, y: G.player.y - 20, t: 0 };
+  Snd.play('bigBaa');
+  const f = G.wolves.find((w) => w.id === 'farmer');
+  if (f) {
+    f.hatOff = true;
+    spawn({ type: 'hat', hat: 'shepherd', x: f.x, y: f.y - 70, vx: rand(-50, 50), vy: -430, g: 520, life: 2.4, vr: rand(-8, 8) });
+    later(1.3, () => say(f, '...Baa.', 2.4));
+  }
+  for (const w of G.wolves) if (w.type === 'hound' && w.active && regionOf(w.x, w.y) === 'hill') later(rand(0.2, 0.8), () => say(w, pick(['Arf?', '*whimper*', 'Hrrmf?']), 1.4));
+  banner("He's just a sheep!", 'Everyone can see it now.', 2.8);
+}
+function updateFarmerReveal(dt) {
+  const st = (G.st += dt), C = G.c3;
+  if (G.shock) { G.shock.t += dt; if (G.shock.t > 1.3) G.shock = null; }
+  for (const w of G.wolves) if (w.bubble) { w.bubble.t -= dt; if (w.bubble.t <= 0) w.bubble = null; }
+  C.revT -= dt;
+  if (C.revT <= 0 && st > 0.8 && st < 6.4) {
+    C.revT = rand(0.35, 0.65);
+    const s = pick(G.sheep.filter((q) => q.protest && !q.bubble));
+    if (s) { say(s, REVEAL3_LINES[Math.min(REVEAL3_LINES.length - 1, Math.floor((st - 0.8) / 0.8))], 1.4); s.hopT = 1; }
+  }
+  for (const s of G.sheep) if (s.protest && Math.random() < dt * 1.5) s.hopT = 1;
+  if (st > 3.4 && !G.flags.fenceDown3) {
+    G.flags.fenceDown3 = true;
+    for (const b of solids) if (b.on && b.ch === CH3 && b.tag === 'wall' && b.y0 >= 3236 && b.x0 < 1500) b.on = false;
+    Snd.play('crash'); addShake(6);
+    for (let i = 0; i < 18; i++) spawn({ type: 'dust', x: rand(60, 1440), y: 3900 + rand(-8, 8), vx: rand(-40, 40), vy: rand(-40, -5), life: rand(0.6, 1.2), size: rand(5, 10) });
+  }
+  if (G.flags.fenceDown3) G.fenceT += dt;
+  if (st > 5.4 && G.player.specsOn) {
+    G.player.specsOn = false; G.view = 0; setUIMode('real'); Snd.setMode('real');
+    spawn({ type: 'glasses', x: G.player.x + 10, y: G.player.y - 30, vx: 60, vy: -160, g: 380, life: 1.4, vr: 6 });
+  }
+  if (st > 7.8 && !G.flags.ended) { G.flags.ended = true; endGame('nobody'); }
+}
+
+/* a little life every frame: hounds grumble, the house staff gossips, the flock chants */
+function updateCh3(dt) {
+  if (G.ch !== CH3 || !G.c3) return;
+  const C = G.c3, reg = regionOf(G.player.x, G.player.y);
+  C.chatT -= dt;
+  if (C.chatT <= 0) {
+    C.chatT = rand(2.8, 4.2);
+    if (reg === 'house' && !G.flags.porch) { const w = G.wolves.find((q) => q.id === 'butler3'); if (w && !w.bubble) { const L = pick(PIG3_CHATTER); say2(w, L[0], L[1], 2.6); } }
+    else if (reg === 'hill' && !G.flags.march) { const w = pick(G.wolves.filter((q) => q.type === 'hound' && regionOf(q.x, q.y) === 'hill' && !q.bubble)); if (w) { const L = pick(HOUND_CHATTER); say2(w, L[0], L[1], 2.2); } }
+  }
+  if (G.flags.march && (G.phase === 'fleecing' || G.phase === 'bigbaa') && !G.flags.revealed) {
+    C.marchT -= dt;
+    if (C.marchT <= 0) { C.marchT = rand(0.6, 1.2); const s = pick(G.sheep.filter((q) => q.protest && !q.run && !q.bubble)); if (s) { say(s, pick(MARCH_LINES), 1.6); s.hopT = 1; } }
+  }
+  if (G.phase === 'bigbaa') for (const s of G.sheep) if (s.protest && Math.random() < dt * 1.2) s.hopT = 1;
+}
+
 /* ---------------- DOM ---------------- */
 const ui = {};
 ['hud', 'hud-top', 'objective', 'obj-toggle', 'obj-new', 'obj-act-text', 'obj-text', 'obj-sub', 'pip-cred', 'pip-woke', 'pip-proof', 'btn-sound', 'btn-pause', 'keys', 'touch', 'joy-zone', 'joy', 'joy-knob',
   't-talk', 't-specs', 't-baa', 't-graze', 'banner', 'banner-title', 'banner-sub', 'toasts', 'rhythm', 'rhythm-fill', 'rhythm-hint',
   'dialog', 'dlg-portrait', 'dlg-name', 'dlg-text', 'dlg-sr', 'dlg-choices', 'doc', 'doc-title', 'doc-body', 'doc-ok',
   'scr-title', 'scr-how', 'scr-pause', 'scr-end', 'btn-play', 'btn-how', 'btn-how-play', 'btn-how-back', 'btn-resume', 'btn-pause-menu',
-  'btn-again', 'btn-menu', 'btn-chapters', 'btn-end-next', 'scr-chapters', 'chapter-list', 'btn-chapters-back', 'woke-long', 'woke-short', 'end-kicker', 'end-title', 'end-text', 'end-stats', 'end-ach', 'ach-head', 'title-foot', 'how-controls', 'pause-controls',
+  'btn-again', 'btn-menu', 'btn-chapters', 'btn-end-next', 'scr-chapters', 'chapter-list', 'btn-chapters-back', 'woke-long', 'woke-short', 'end-kicker', 'end-title', 'end-text', 'end-post', 'end-stats', 'end-ach', 'ach-head', 'title-foot', 'how-controls', 'pause-controls',
 ].forEach((id) => { ui[id.replace(/-([a-z])/g, (m, c) => c.toUpperCase())] = document.getElementById(id); });
 
 const ICON = {
@@ -5328,8 +6266,8 @@ function syncHUD(force) {
   const prevCred = hudKey ? +hudKey.split('|')[0] : G.cred;
   hudKey = key;
   ui.pipCred.innerHTML = pips(3, G.cred, 'bell'); ui.pipCred.setAttribute('aria-label', 'Credibility ' + G.cred + ' of 3');
-  const meter = G.ch === 2 ? 'Pig-O-Meter' : 'Woke-O-Meter';
-  ui.wokeLong.textContent = meter; ui.wokeShort.textContent = G.ch === 2 ? 'Pigs' : 'Woke';
+  const meter = G.ch === 3 ? 'Eyewitnesses' : G.ch === 2 ? 'Pig-O-Meter' : 'Woke-O-Meter';
+  ui.wokeLong.textContent = meter; ui.wokeShort.textContent = G.ch === 3 ? 'Seen' : G.ch === 2 ? 'Pigs' : 'Woke';
   ui.pipWoke.innerHTML = pips(WOKE_GOAL, w, 'sheep'); ui.pipWoke.setAttribute('aria-label', meter + ' ' + w + ' of ' + WOKE_GOAL);
   ui.pipProof.innerHTML = pips(PROOF_COUNT, G.proof.size, 'doc'); ui.pipProof.setAttribute('aria-label', 'Proof ' + G.proof.size + ' of ' + PROOF_COUNT);
   if (prevCred > G.cred) { ui.pipCred.classList.remove('hit'); void ui.pipCred.offsetWidth; ui.pipCred.classList.add('hit'); }
@@ -5402,7 +6340,7 @@ let dlgTyping = false, dlgTimer = 0, dlgFull = '', dlgNode = null, dlgLeave = nu
 const pctx = ui.dlgPortrait.getContext('2d');
 function drawPortrait(node) {
   const prev = ctx, pRT = RT, pRR = RR;
-  ctx = pctx; RT = G.view; RR = G.ch === 2 ? 1 - G.view : G.realT;
+  ctx = pctx; RT = G.view; RR = G.ch >= 2 ? 1 - G.view : G.realT;
   pctx.setTransform(1, 0, 0, 1, 0, 0); pctx.clearRect(0, 0, 128, 128);
   const who = node.who;
   try {
@@ -5414,9 +6352,10 @@ function drawPortrait(node) {
       drawSheep(Object.assign({}, who, { x: 0, y: 0, facing: 1, walk: 0, grazing: false, hopT: 0, wakeFx: 0 }), false, { portrait: true });
     } else if (who && who.type) {
       const tower = who.type === 'tower', crow = who.type === 'crow', pigR = who.type === 'pig' && !(G.view === 1 || G.disguisesGone);
-      const k = who.type === 'dog' ? 3.4 : tower ? 3.2 : crow ? 3.6 : pigR ? 2.8 : 2.9;
-      const hx = who.type === 'dog' ? 15 : who.type === 'twohead' ? 0 : tower ? -10 : crow ? 6 : pigR ? 14 : 6;
-      const hy = who.type === 'dog' ? -25 : tower ? -144 : crow ? -60 : pigR ? -22 : -57;
+      const hound = who.type === 'hound', scare = who.type === 'scarecrow', sheepF = who.type === 'farmer' && (G.view === 1 || G.disguisesGone), manF = who.type === 'farmer' && !sheepF;
+      const k = who.type === 'dog' || hound ? 3.4 : tower ? 3.2 : crow ? 3.6 : pigR ? 2.8 : sheepF ? 2.6 : manF ? 2.5 : 2.9;
+      const hx = who.type === 'dog' ? 15 : hound ? 20 : who.type === 'twohead' || scare ? 0 : tower ? -10 : crow ? 6 : pigR ? 14 : sheepF ? 18 : manF ? 6 : 6;
+      const hy = who.type === 'dog' ? -25 : hound ? -22 : tower ? -144 : crow ? -60 : pigR ? -22 : scare ? -72 : sheepF ? -38 : manF ? -66 : -57;
       pctx.setTransform(k, 0, 0, k, 64 - hx * k, 70 - hy * k);
       drawWolf(Object.assign({}, who, { x: 0, y: 0, facing: 1, walk: 0, waving: false, limp: false, flying: false }), { portrait: true });
     } else {
@@ -5588,12 +6527,12 @@ function setPause(on) {
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !G.modal) setPause(true); });
 const fmtTime = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
-const achKeys = () => Object.keys(ACH).filter((id) => !ACH_CH2.has(id) || ch2Unlocked());
+const achKeys = () => Object.keys(ACH).filter((id) => (!ACH_CH2.has(id) || ch2Unlocked()) && (!ACH_CH3.has(id) || ch3Unlocked()));
 function refreshTitleFoot() {
   const s = store.get(), n = (s.ach || []).filter((id) => achKeys().indexOf(id) >= 0).length;
   let t = 'About 10 minutes a chapter. Sound on.';
   if (s.best) t += ' Your best: ' + fmtTime(s.best) + '.';
-  if (ch2Unlocked()) t += ' Chapter 2 unlocked.';
+  if (ch3Unlocked()) t += ' Chapter 3 unlocked.'; else if (ch2Unlocked()) t += ' Chapter 2 unlocked.';
   if (n) t += ' Achievements: ' + n + ' of ' + achKeys().length + '.';
   ui.titleFoot.textContent = t;
   refreshPlayButton();
@@ -5626,11 +6565,12 @@ function toTitle() {
 const CHAPTERS = [
   { n: 1, name: 'Greener Pastures', blurb: 'Find the glasses, prove the shepherds are wolves, and wake the flock.', best: 'best', start: () => restartChapter(1, false) },
   { n: 2, name: 'Hogwash', blurb: 'The wolves are back, wearing badges. Follow the strings to the Farmhouse.', best: 'best2', start: startChapter2 },
-  { n: 3, name: 'The Farmer', blurb: 'Up the hill, a light just came on in the Big House.' },
+  { n: 3, name: 'The Farmer', blurb: 'Up the hill, a light just came on in the Big House. Nobody has ever seen the Farmer.', best: 'best3', start: startChapter3 },
 ];
 function chapterOpen(c) {
   if (c.n === 1) return true;
   if (c.n === 2 && ch2Unlocked()) return true;
+  if (c.n === 3 && CH3_PARAM) return true;
   const prev = CHAPTERS.find((q) => q.n === c.n - 1);
   return !!(prev && prev.best && store.get()[prev.best]);
 }
@@ -5682,16 +6622,27 @@ const ENDINGS = {
   counted: ['Bad ending', 'Counted', 'You wake up in the meadow. Everything is bright and happy, and you feel uneasy for no reason. The glasses are still in the mud by the fence.'],
   hogwash: ['Chapter 2 complete', 'Hogwash', 'The pigs bolted out the back of the Farmhouse, still in their suits, and ran for the Big House up the hill. The strings lie slack across the farm, and the wolves are napping where they fell. The Chairman yelled one last thing over his shoulder: pigs never ran this farm. They just answer to the Farmer. Up the hill, a light comes on. To be continued.'],
   retired: ['Bad ending', 'Retired', "The Bureau's paperwork was flawless. The flock got a lovely card: 'Retired! Voluntarily!' Nobody listens to a sheep who retired. The pool at Sunny Acres is very warm."],
+  farmhand: ['Bad ending', 'Farmhand', 'The hounds carried you down the hill one time too many. The Farmer sent a lovely note, and a job: mending fences. You mend them very well. Up the hill, the light stays on.'],
+  nobody: ['True ending', "Nobody's Farm", "The Farmer was just a sheep who got tired of being asked what to do. The flock knocked down his fence, then the ranch fence, then the idea of a fence. Nobody runs the farm now. It's messy. Barbara and Doug argue about everything, out loud, to each other's faces. Nana has the heated pool. The grass is green because it's grass."],
+  shepherd: ['Dark ending', 'New Shepherd', 'You put on the hat. It fits. Down the hill the flock cheers, because the flock always cheers. Tomorrow you will build them a nicer fence, with a friendlier sign. The old ram hands you a box of little glasses, sheep-sized, and points at the east fence. Your shadow on the wall has pointy ears.'],
 };
+// after the credits: one more line on the end screen, after a beat
+const POSTCREDITS = {
+  win: 'The glasses lie in the mud where they fell. There is a tiny tag inside the frame: PROPERTY OF GREENER PASTURES RANCH. Somebody left them there on purpose.',
+  hogwash: 'Up the hill, in the Big House, somebody in a straw hat draws the curtains shut.',
+  nobody: "Weeks later, a lamb finds a pair of glasses in the mud by the east fence. He puts them on. Everything looks exactly the same. 'Huh,' says Lambert, and goes back to grazing.",
+  shepherd: 'Down by the east fence, you push a brand-new pair of glasses into the mud. Sheep-sized. A little smudged. Somebody restless will find them.',
+};
+let postTimer = 0;
 function endGame(kind) {
   if (G.lick) clearLick();
   G.mode = 'ending'; G.endKind = kind; G.modal = null;
   for (const el of [ui.hud, ui.touch, ui.rhythm, ui.banner, ui.dialog, ui.doc]) el.hidden = true;
   app.classList.remove('dlg-open');
-  const s = store.get(), win = kind === 'win' || kind === 'hogwash', bestKey = G.ch === 2 ? 'best2' : 'best';
+  const s = store.get(), win = kind === 'win' || kind === 'hogwash' || kind === 'nobody' || kind === 'shepherd', bestKey = G.ch === 3 ? 'best3' : G.ch === 2 ? 'best2' : 'best';
   let newBest = false;
   if (win) {
-    unlock(kind === 'win' ? 'pastures' : 'hogwash');
+    unlock(kind === 'win' ? 'pastures' : kind === 'hogwash' ? 'hogwash' : kind === 'nobody' ? 'nobody' : 'hat');
     const patch = {};
     if (!s[bestKey] || G.time < s[bestKey]) { patch[bestKey] = Math.round(G.time); newBest = true; }
     if (kind === 'win') patch.ch2 = true;
@@ -5699,18 +6650,23 @@ function endGame(kind) {
   } else {
     G.view = 0; G.wipe = null; G.player.specsOn = false; setUIMode(offMode()); Snd.setMode(offMode());
     const p = G.player;
-    if (kind === 'retired') { p.x = 2220; p.y = 784; } else { p.x = 600; p.y = 900; }
+    if (kind === 'retired') { p.x = 2220; p.y = 784; } else if (kind === 'farmhand') { p.x = 1180; p.y = 900; } else { p.x = 600; p.y = 900; }
     p.vx = p.vy = 0;
     for (const w of G.wolves) w.alert = 0;
     G.camTarget = null; G.woozy = 0; updateCamera(0, true);
   }
   const E = ENDINGS[kind] || ENDINGS.counted;
   ui.endKicker.textContent = E[0]; ui.endTitle.textContent = E[1]; ui.endText.textContent = E[2];
-  const meter = G.ch === 2 ? 'Convinced' : 'Woke';
+  clearTimeout(postTimer); ui.endPost.classList.remove('show'); ui.endPost.hidden = !POSTCREDITS[kind];
+  if (POSTCREDITS[kind]) {
+    ui.endPost.innerHTML = ''; const b = document.createElement('b'); b.textContent = 'After the credits'; ui.endPost.append(b, document.createTextNode(POSTCREDITS[kind]));
+    postTimer = setTimeout(() => ui.endPost.classList.add('show'), RM ? 0 : 1800);
+  }
+  const meter = G.ch === 3 ? 'Eyewitnesses' : G.ch === 2 ? 'Convinced' : 'Woke';
   const stats = kind === 'win'
     ? [['Time', fmtTime(G.time), newBest ? 'Your best yet' : ''], ['Credibility', G.cred + ' of 3'], ['Proof', G.proof.size + ' of ' + PROOF_COUNT], ['You woke', String(G.wokePersonal)]]
-    : kind === 'hogwash'
-      ? [['Time', fmtTime(G.time), newBest ? 'Your best yet' : ''], ['Credibility', G.cred + ' of 3'], ['Proof', G.proof.size + ' of ' + PROOF_COUNT], ['Convinced', String(G.wokePersonal)]]
+    : kind === 'hogwash' || kind === 'nobody' || kind === 'shepherd'
+      ? [['Time', fmtTime(G.time), newBest ? 'Your best yet' : ''], ['Credibility', G.cred + ' of 3'], [G.ch === 3 ? 'Windows' : 'Proof', G.proof.size + ' of ' + PROOF_COUNT], [meter, String(G.wokePersonal)]]
       : [['Time', fmtTime(G.time)], ['Proof', G.proof.size + ' of ' + PROOF_COUNT], [meter, Math.min(WOKE_GOAL, G.woke) + ' of ' + WOKE_GOAL]];
   ui.endStats.innerHTML = ''; ui.endStats.className = 'stats-list n' + stats.length;
   for (const [a, b, c] of stats) { const d = document.createElement('div'); const dt = document.createElement('dt'); dt.textContent = a; const dd = document.createElement('dd'); dd.textContent = b; d.append(dt, dd); if (c) { const sm = document.createElement('small'); sm.textContent = c; d.appendChild(sm); } ui.endStats.appendChild(d); }
@@ -5737,6 +6693,7 @@ function restartChapter(ch, retry) {
   newGame({ ch, retry });
   startPlay();
   if (ch === 2) later(0.4, openCh2Intro);
+  if (ch === 3) later(0.4, openCh3Intro);
 }
 ui.btnPlay.addEventListener('click', () => { Snd.init(); playNext(); });
 ui.btnHow.addEventListener('click', () => { Snd.init(); fillControls(ui.howControls); ui.scrHow.hidden = false; ui.btnHowPlay.focus({ preventScroll: true }); });
@@ -5827,6 +6784,7 @@ function updatePlay(dt) {
   updateChurch(dt);
   updateStudio(dt);
   updateCh2(dt);
+  updateCh3(dt);
   updateWolves(dt);
   if (G.phase === 'fleecing') detect(dt); else { G.maxAlert = 0; G.seenBy = null; G.hiddenFrom = false; }
   if (G.modal) return;
@@ -5845,7 +6803,7 @@ function updatePlay(dt) {
     else if (G.phase === 'bigbaa') updateRhythm(dt);
     else if (G.phase === 'stampede') updateStampede(dt);
   }
-  if (G.view === 1 && (G.ch === 2 || G.realT < 0.5) && regionOf(p.x, p.y) === 'ranch') fenceSparks(dt);
+  if (G.view === 1 && (G.ch >= 2 || G.realT < 0.5) && regionOf(p.x, p.y) === 'ranch') fenceSparks(dt);
   if (regionOf(p.x, p.y) === 'field') {
     G.flags[p.x < DIVIDER.x ? 'sawNorth' : 'sawSouth'] = true;
     if (G.flags.sawNorth && G.flags.sawSouth && !G.flags.samePasture) { G.flags.samePasture = true; unlock('pasture'); toast('It is one field', 'The North Pasture and the South Pasture are the same pasture.'); }
@@ -5903,7 +6861,7 @@ function frame(now) {
 
 /* ---------------- keep a run going across page updates ---------------- */
 function makeSnapshot() {
-  if (G.mode !== 'play' || !G.player || G.ch === 2) return { wakeUpSheeple: null };
+  if (G.mode !== 'play' || !G.player || G.ch !== 1) return { wakeUpSheeple: null };
   const p = G.player;
   return { wakeUpSheeple: {
     v: 1, phase: G.phase, px: p.x, py: p.y, hasSpecs: p.hasSpecs, specsOn: p.specsOn, cred: G.cred,
@@ -5989,6 +6947,12 @@ if (DEBUG) {
     sheep(id) { const s = G.sheep.find((q) => q.id === id); return s && { x: Math.round(s.x), y: Math.round(s.y), state: s.state, follow: s.follow, sulk: s.sulk }; },
     wear(on) { const p = G.player; p.hasSpecs = true; p.specsOn = !!on; G.view = on ? 1 : 0; G.wipe = null; setUIMode(on ? 'truth' : offMode()); Snd.setMode(on ? 'truth' : offMode()); },
     ch2(intro) { newGame({ ch: 2 }); startPlay(); if (intro) later(0.4, openCh2Intro); },
+    ch3(intro) { newGame({ ch: 3 }); startPlay(); if (intro) later(0.4, openCh3Intro); },
+    follow(id) { const s = G.sheep.find((q) => q.id === id); if (s) tagAlong(s); },
+    see(id) { const s = G.sheep.find((q) => q.id === id); if (s) convince3(s); },
+    march() { startMarch3(); },
+    farmer() { const f = G.wolves.find((w) => w.id === 'farmer'); return f && { x: Math.round(f.x), y: Math.round(f.y), hatOff: !!f.hatOff, region: regionOf(f.x, f.y) }; },
+    door(id) { const pt = PORTALS.find((q) => q.id === id); return pt && pt.locked ? pt.locked() : false; },
     convince(id) { const s = G.sheep.find((q) => q.id === id); if (s) convince(s); },
     crow(i) { const w = G.wolves.find((q) => q.id === 'crow' + (i || 0)); if (w) crowReport(w); },
     retireMe() { retire(G.wolves.find((q) => q.id === 'agentA')); },

@@ -86,6 +86,7 @@ function drawSheep(s, isP, opt) {
     ctx.moveTo(ex1 - 2.2, ey - 4.8); ctx.lineTo(ex1 + 1.8, ey - 3.8); ctx.moveTo(ex2 - 1.8, ey - 3.8); ctx.lineTo(ex2 + 2.2, ey - 4.8); ctx.stroke();
   }
   if (isP && s.specsOn) drawSpecsOnFace(ex1, ex2, ey);
+  if (isP && s.hat) { ctx.save(); ctx.translate(1, -5); strawHat(0, 0); ctx.restore(); }
   if (s.id === 'barbara') {
     ctx.fillStyle = P('bow'); ctx.beginPath();
     ctx.moveTo(-2, -12); ctx.lineTo(-8.5, -16.5); ctx.lineTo(-7.5, -8.5); ctx.closePath();
@@ -102,7 +103,7 @@ function drawSheep(s, isP, opt) {
     fillE('candyA', -1, -11, 9.5, 5.5, -0.15); fillE('candyA', 1, -15, 7, 4.5, -0.1); fillC('candyA', 4, -18, 3.4);
     ctx.strokeStyle = P('candyB'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-8, -10); ctx.lineTo(7, -13); ctx.stroke();
   }
-  if (s.id === 'bellwether') {
+  if (s.id === 'bellwether' || s.id === 'farmer') {
     ctx.strokeStyle = P('hatSh'); ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath();
     for (let a = 0; a < 9.5; a += 0.3) { const r = 1 + a * 0.62; ctx.lineTo(-5 + Math.cos(a + 1.2) * r, -6 + Math.sin(a + 1.2) * r * 0.9); }
     ctx.stroke();
@@ -174,11 +175,12 @@ function drawWolfBody(w, opt) {
   const wolfy = isTruthPass() || G.disguisesGone || RR > 0.5;
   const portrait = opt && opt.portrait;
   ctx.save(); ctx.translate(w.x, w.y);
-  if (!portrait && !w.flying) { ctx.fillStyle = P('shadow'); ell(0, 1, w.type === 'twohead' ? 27 : w.type === 'dog' ? 17 : w.type === 'pig' ? 19 : w.type === 'crow' ? 8 : 15, w.type === 'crow' ? 3 : 5.5); ctx.fill(); }
+  if (!portrait && !w.flying) { ctx.fillStyle = P('shadow'); ell(0, 1, w.type === 'twohead' ? 27 : w.type === 'dog' ? 17 : w.type === 'pig' ? 19 : w.type === 'hound' ? 22 : w.type === 'farmer' ? 20 : w.type === 'crow' ? 8 : 15, w.type === 'crow' ? 3 : 5.5); ctx.fill(); }
   if (w.type === 'tower') { ctx.restore(); drawTower(w); return; }
   if (w.type === 'crow') { drawCrow(w); ctx.restore(); return; }
   if (w.limp && !portrait) { ctx.translate(0, -5); ctx.rotate(-1.42 * (w.facing || 1)); }
   if (w.type === 'pig') { drawPig(w); ctx.restore(); return; }
+  if (CH3_TYPES.has(w.type)) { drawCh3Char(w); ctx.restore(); return; }
   if (w.type === 'dog') { drawDog(w); ctx.restore(); return; }
   if (w.type === 'twohead') { drawTwoHead(w, wolfy); ctx.restore(); return; }
   if (w.type === 'pastor') { drawPastor(w, wolfy, portrait); ctx.restore(); return; }
@@ -229,7 +231,7 @@ function drawWolfBody(w, opt) {
     ctx.strokeStyle = P('steth'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-5, -47); ctx.quadraticCurveTo(-3, -33, 2, -31); ctx.quadraticCurveTo(7, -33, 6, -47); ctx.stroke();
     fillC('steth', 2, -30, 2.1);
   }
-  if (G.ch === 2 && w.type !== 'guard') fillC('tag', 4, -40, 2.3);
+  if (G.ch >= 2 && w.type !== 'guard') fillC('tag', 4, -40, 2.3);
   let fx = 12, fy = -28 + sw * 0.4;
   if (w.waving) { fx = 17 + (RM ? 0 : Math.sin(t * 9) * 4); fy = -80; }
   ctx.strokeStyle = P(armK); ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(7, -44); ctx.lineTo(fx, fy); ctx.stroke(); fillC(handK, fx, fy, 3.3);

@@ -75,6 +75,7 @@ function updatePlay(dt) {
   updateChurch(dt);
   updateStudio(dt);
   updateCh2(dt);
+  updateCh3(dt);
   updateWolves(dt);
   if (G.phase === 'fleecing') detect(dt); else { G.maxAlert = 0; G.seenBy = null; G.hiddenFrom = false; }
   if (G.modal) return;
@@ -93,7 +94,7 @@ function updatePlay(dt) {
     else if (G.phase === 'bigbaa') updateRhythm(dt);
     else if (G.phase === 'stampede') updateStampede(dt);
   }
-  if (G.view === 1 && (G.ch === 2 || G.realT < 0.5) && regionOf(p.x, p.y) === 'ranch') fenceSparks(dt);
+  if (G.view === 1 && (G.ch >= 2 || G.realT < 0.5) && regionOf(p.x, p.y) === 'ranch') fenceSparks(dt);
   if (regionOf(p.x, p.y) === 'field') {
     G.flags[p.x < DIVIDER.x ? 'sawNorth' : 'sawSouth'] = true;
     if (G.flags.sawNorth && G.flags.sawSouth && !G.flags.samePasture) { G.flags.samePasture = true; unlock('pasture'); toast('It is one field', 'The North Pasture and the South Pasture are the same pasture.'); }
@@ -151,7 +152,7 @@ function frame(now) {
 
 /* ---------------- keep a run going across page updates ---------------- */
 function makeSnapshot() {
-  if (G.mode !== 'play' || !G.player || G.ch === 2) return { wakeUpSheeple: null };
+  if (G.mode !== 'play' || !G.player || G.ch !== 1) return { wakeUpSheeple: null };
   const p = G.player;
   return { wakeUpSheeple: {
     v: 1, phase: G.phase, px: p.x, py: p.y, hasSpecs: p.hasSpecs, specsOn: p.specsOn, cred: G.cred,
@@ -237,6 +238,12 @@ if (DEBUG) {
     sheep(id) { const s = G.sheep.find((q) => q.id === id); return s && { x: Math.round(s.x), y: Math.round(s.y), state: s.state, follow: s.follow, sulk: s.sulk }; },
     wear(on) { const p = G.player; p.hasSpecs = true; p.specsOn = !!on; G.view = on ? 1 : 0; G.wipe = null; setUIMode(on ? 'truth' : offMode()); Snd.setMode(on ? 'truth' : offMode()); },
     ch2(intro) { newGame({ ch: 2 }); startPlay(); if (intro) later(0.4, openCh2Intro); },
+    ch3(intro) { newGame({ ch: 3 }); startPlay(); if (intro) later(0.4, openCh3Intro); },
+    follow(id) { const s = G.sheep.find((q) => q.id === id); if (s) tagAlong(s); },
+    see(id) { const s = G.sheep.find((q) => q.id === id); if (s) convince3(s); },
+    march() { startMarch3(); },
+    farmer() { const f = G.wolves.find((w) => w.id === 'farmer'); return f && { x: Math.round(f.x), y: Math.round(f.y), hatOff: !!f.hatOff, region: regionOf(f.x, f.y) }; },
+    door(id) { const pt = PORTALS.find((q) => q.id === id); return pt && pt.locked ? pt.locked() : false; },
     convince(id) { const s = G.sheep.find((q) => q.id === id); if (s) convince(s); },
     crow(i) { const w = G.wolves.find((q) => q.id === 'crow' + (i || 0)); if (w) crowReport(w); },
     retireMe() { retire(G.wolves.find((q) => q.id === 'agentA')); },

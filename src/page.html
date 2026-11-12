@@ -213,6 +213,10 @@ button{font:inherit;color:inherit}
 .chapter .blurb{font:500 14px/1.35 var(--ui-font);color:var(--ui-muted)}
 .chapter .status{grid-column:2;font:var(--ui-w) 13px/1.2 var(--ui-font);color:var(--ui-accent);font-variant-numeric:tabular-nums}
 .chapter:disabled .status{color:var(--ui-muted)}
+.end-post{margin:0;padding:10px 12px;border-left:3px solid var(--ui-accent);font:italic 500 15px/1.4 var(--ui-font);color:var(--ui-muted);opacity:0;transform:translateY(4px);transition:opacity .9s ease,transform .9s ease}
+.end-post.show{opacity:1;transform:none}
+.end-post b{font-style:normal;letter-spacing:.08em;text-transform:uppercase;font-size:11px;color:var(--ui-accent);margin-right:6px}
+@media (prefers-reduced-motion:reduce){.end-post{transition:none}}
 .ach-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;font:500 15px/1.35 var(--ui-font)}
 .ach-list li{display:flex;gap:10px;align-items:baseline}
 .ach-list .mark{flex:none;width:1.2em;text-align:center;color:var(--ui-accent)}
@@ -384,6 +388,7 @@ button{font:inherit;color:inherit}
       <span class="eyebrow" id="end-kicker"></span>
       <h2 id="end-title"></h2>
       <p id="end-text"></p>
+      <p id="end-post" class="end-post" hidden></p>
       <dl class="stats-list" id="end-stats"></dl>
       <div>
         <span class="eyebrow" id="ach-head">Achievements</span>

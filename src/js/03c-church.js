@@ -98,6 +98,7 @@ LINES.ewenice = {
 {
   const fin = ACH.pastures; delete ACH.pastures;
   ACH.flock = ['Let My Flock Go', 'Have Sister Ewenice ring the bell for the stampede'];
+  ACH.fleeced = ['Fleeced', 'Sit through the collection plate in the chapel with your glasses off'];
   ACH.pastures = fin;
 }
 let PROOF_COUNT = PROOF_DEFS.length;

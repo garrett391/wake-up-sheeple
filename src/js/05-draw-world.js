@@ -94,7 +94,7 @@ function drawBillboard() {
   ['#B98A8A', '#B99A7A', '#B9B07A', '#8AA88A', '#8AA0B0', '#9A8AB0'].forEach((c, i) => { ctx.strokeStyle = c; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(cx, 232, 80 - i * 8, Math.PI, TAU); ctx.stroke(); });
   ctx.restore();
   fillR('board', 424, 216, 152, 15, 2);
-  text(G.ch === 2 ? 'PROPERTY OF HOG HOLDINGS MARKETING' : 'PROPERTY OF GREENER PASTURES MARKETING', cx, 223.5, 9, F_TRUTH, P('ink'), 144);
+  text(G.ch === 3 ? 'PROPERTY OF THE FARMER' : G.ch === 2 ? 'PROPERTY OF HOG HOLDINGS MARKETING' : 'PROPERTY OF GREENER PASTURES MARKETING', cx, 223.5, 9, F_TRUTH, P('ink'), 144);
 }
 function drawSunnyGate() {
   const x0 = 150, x1 = 230, y = FY0, cx = 190;

@@ -1,5 +1,5 @@
 /* ---------------- the ranch ---------------- */
-const W = 3150, H = 3000;
+const W = 3150, H = 3950;
 const MW = 1500, MH = 1300; // the ranch itself; other pastures sit further out in the same world
 const FX0 = 60, FX1 = 1220, FY0 = 130, FY1 = 1050;
 const HOLE0 = 770, HOLE1 = 830;

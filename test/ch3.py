@@ -54,8 +54,11 @@ def run(width, height, touch, tag):
         pick(pg, 'Come up the hill'); pick(pg, "Let's go"); pg.wait_for_timeout(200)
         ok['follows'] = pg.evaluate("__wus.sheep('barbara')")['follow']
         # 3. the hill road: she comes along through the portal
-        pg.evaluate("__wus.tp(604, 1240)"); pg.wait_for_timeout(500)
-        print(tag, "road prompt:", pg.evaluate("__wus.interact()"))
+        # walk out through the open main gate to the road: no teleport, so a closed gate fails here
+        pg.evaluate("__wus.tp(620, 960)"); pg.wait_for_timeout(200)
+        pg.keyboard.down("ArrowDown"); pg.wait_for_timeout(1700); pg.keyboard.up("ArrowDown"); pg.wait_for_timeout(300)
+        road = pg.evaluate("__wus.interact()"); print(tag, "road prompt:", road, st(pg)["py"])
+        ok['walk_to_road'] = bool(road) and road['kind'] == 'portal' and 'hill' in road['label']
         pg.evaluate("__wus.portal('hillRoad')"); pg.wait_for_timeout(600)
         ok['hill'] = pg.evaluate("__wus.region()") == 'hill' and pg.evaluate("__wus.G.sheep.find(s => s.id === 'barbara').y") > 3000
         shot(pg, f"{tag}-05-hill-real")

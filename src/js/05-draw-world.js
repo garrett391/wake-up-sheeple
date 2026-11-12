@@ -107,7 +107,8 @@ function drawSunnyGate() {
 }
 function drawGatePosts() {
   fillR('woodSh', GATE0 - 8, FY1 - 64, 10, 64, 2); fillR('woodSh', GATE1 - 2, FY1 - 64, 10, 64, 2);
-  if (!G.flags.fenceDown) {
+  if (G.ch === 3) { fillR('wood', GATE0 + 2, FY1 - 34, 7, 30, 2); fillR('wood', GATE1 - 9, FY1 - 34, 7, 30, 2); }
+  else if (!G.flags.fenceDown) {
     for (const [a, b] of [[GATE0 + 2, GATEX - 1], [GATEX + 1, GATE1 - 2]]) {
       fillR('wood', a, FY1 - 34, b - a, 30, 2);
       ctx.strokeStyle = P('woodSh'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a, FY1 - 34); ctx.lineTo(b, FY1 - 4);

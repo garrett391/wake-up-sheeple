@@ -321,8 +321,9 @@ for (const d of [
 // a little arrow at the screen edge when a friend is tagging along: where to take them
 function drawCh3Overlays() {
   if (G.ch !== CH3 || G.mode !== 'play' || G.phase !== 'fleecing' || G.modal) return;
+  if (G.flags.march && regionOf(G.player.x, G.player.y) === 'ranch') { drawEdgeArrow(604, 1240, 'Hill road', '#FFE14D', 'ranch'); return; }
   const reg = regionOf(G.player.x, G.player.y), tag = G.sheep.find((s) => s.follow && LINES3[s.id] && !s.deep);
+  if (reg === 'ranch' && (tag || !G.flags.visitedHill)) drawEdgeArrow(604, 1240, 'Hill road', '#FFE14D', 'ranch');
   if (!tag) return;
-  if (reg === 'ranch') drawEdgeArrow(604, 1240, 'Hill road', '#FFE14D', 'ranch');
-  else if (reg === 'hill') { const wd = WINDOWS3.find((q) => q.id === LINES3[tag.id].win); if (wd) drawEdgeArrow(wd.x, WIN_Y, 'Window', '#FFE14D', 'hill'); }
+  if (reg === 'hill') { const wd = WINDOWS3.find((q) => q.id === LINES3[tag.id].win); if (wd) drawEdgeArrow(wd.x, WIN_Y, 'Window', '#FFE14D', 'hill'); }
 }

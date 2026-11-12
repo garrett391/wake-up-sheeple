@@ -43,7 +43,7 @@ function openRevealDialog3() {
 function openRevealDialog3b() {
   const freeze = touchMode ? 'hold Graze' : 'hold Shift';
   openDialog({ who: 'system', name: 'Through the glasses', text: 'Up the hill stands the Big House. Every light on. Every curtain shut. The pigs went in there, and nobody has seen them come out.', choices: [{ label: 'Continue', run: () => ({
-    who: 'system', name: 'Seeing is believing', text: "Your friends love the Farmer. They won't take your word for it this time: they have to see it with their own eyes. Take them up the hill to the windows. Up there, hounds sniff out anything that moves (" + freeze + ' to freeze), scarecrows notice glasses, and a searchlight never stops turning.',
+    who: 'system', name: 'Seeing is believing', text: "Your friends love the Farmer. They won't take your word for it this time: they have to see it with their own eyes. Take them up the hill to the windows: the main gate stands open now, and the hill road starts right outside it. Up there, hounds sniff out anything that moves (" + freeze + ' to freeze), scarecrows notice glasses, and a searchlight never stops turning.',
     choices: [{ label: 'Got it', run: () => {
       G.fade = { t: 0, dur: 0.9, fired: false, mid: () => { G.camTarget = null; updateCamera(0, true); if (G.cut) { G.cut.stage = 'back'; G.cut.t = 0; } } };
       return null;
@@ -58,14 +58,14 @@ function ch3Objective() {
   if (G.flags.march) {
     if (reg === 'house') setObjective(G.flags.metFarmer ? 'Talk to the Farmer.' : 'Find the Farmer. His study is at the back.', 'The hounds notice anything that moves. Hold ' + key + ' to freeze.');
     else if (reg === 'hill') setObjective('The whole flock is at the door.', 'The Big House is open. Go in and meet the Farmer.');
-    else setObjective('The whole flock went up the hill.', 'The hill road starts outside the main gate.');
+    else setObjective('The whole flock went up the hill.', 'Go out through the main gate. The hill road starts right outside it.');
     return;
   }
   const tag = tagger();
   if (tag) {
     const wd = WINDOWS3.find((q) => q.id === LINES3[tag.id].win), pron = LINES3[tag.id].pron;
     if (reg === 'hill') setObjective('Show ' + tag.name + ' ' + wd.name + '.', 'Stand at the window with ' + pron + ' right behind you.');
-    else if (reg === 'ranch') setObjective('Take ' + tag.name + ' up the hill.', 'Squeeze out through the hole in the east fence. The hill road starts outside the main gate.');
+    else if (reg === 'ranch') setObjective('Take ' + tag.name + ' up the hill.', 'Go out through the main gate, in the south fence. The hill road starts right outside it.');
     else setObjective(tag.name + ' is following you.', 'Take ' + pron + ' up the hill, to ' + wd.name + '.');
     return;
   }
@@ -75,7 +75,7 @@ function ch3Objective() {
   }
   if (reg === 'church') { setObjective('The pastor is napping mid-sermon.', 'Nobody in here needs waking today.'); return; }
   const need = Math.max(0, WOKE_GOAL - G.woke);
-  setObjective('Bring ' + need + ' more ' + (need === 1 ? 'friend' : 'friends') + ' up the hill to see for themselves.', G.hint || 'Ask your friends about the Farmer. Nobody has ever seen him.');
+  setObjective('Bring ' + need + ' more ' + (need === 1 ? 'friend' : 'friends') + ' up the hill to see for themselves.', G.hint || (G.flags.visitedHill ? 'Ask your friends about the Farmer. Nobody has ever seen him.' : 'Ask your friends about the Farmer. The hill road starts outside the main gate, which stands open now.'));
 }
 
 /* talking, chapter 3 */

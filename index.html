@@ -1536,6 +1536,8 @@ for (const r of [[20, 3236, BIGH.x0, 3262], [BIGH.x1, 3236, 1480, 3262], [20, 32
 // hedges: cover from the searchlight and the scarecrows
 const HEDGES3 = [[190, 3420, 320, 3460], [1180, 3420, 1310, 3460], [400, 3580, 540, 3620], [960, 3580, 1100, 3620], [220, 3730, 360, 3770], [1140, 3730, 1280, 3770], [560, 3350, 690, 3384], [810, 3350, 940, 3384]];
 for (const h of HEDGES3) chOnly(solid(h[0], h[1], h[2], h[3], 'hedge', true), CH3);
+// in chapter 3 the main gate stands open: the hill road starts right outside it
+for (const b of solids) if (b.tag === 'gate') b.ch = [1, 2];
 const LAMP = { x: 750, y: 3650 };
 chOnly(solid(LAMP.x - 7, LAMP.y - 8, LAMP.x + 7, LAMP.y + 2, 'prop'), CH3);
 const SCARECROWS = [[150, 3560, 0], [1350, 3560, Math.PI], [410, 3300, 0.1], [1090, 3300, Math.PI - 0.1]];
@@ -2145,7 +2147,8 @@ function drawSunnyGate() {
 }
 function drawGatePosts() {
   fillR('woodSh', GATE0 - 8, FY1 - 64, 10, 64, 2); fillR('woodSh', GATE1 - 2, FY1 - 64, 10, 64, 2);
-  if (!G.flags.fenceDown) {
+  if (G.ch === 3) { fillR('wood', GATE0 + 2, FY1 - 34, 7, 30, 2); fillR('wood', GATE1 - 9, FY1 - 34, 7, 30, 2); }
+  else if (!G.flags.fenceDown) {
     for (const [a, b] of [[GATE0 + 2, GATEX - 1], [GATEX + 1, GATE1 - 2]]) {
       fillR('wood', a, FY1 - 34, b - a, 30, 2);
       ctx.strokeStyle = P('woodSh'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a, FY1 - 34); ctx.lineTo(b, FY1 - 4);
@@ -3545,10 +3548,11 @@ for (const d of [
 // a little arrow at the screen edge when a friend is tagging along: where to take them
 function drawCh3Overlays() {
   if (G.ch !== CH3 || G.mode !== 'play' || G.phase !== 'fleecing' || G.modal) return;
+  if (G.flags.march && regionOf(G.player.x, G.player.y) === 'ranch') { drawEdgeArrow(604, 1240, 'Hill road', '#FFE14D', 'ranch'); return; }
   const reg = regionOf(G.player.x, G.player.y), tag = G.sheep.find((s) => s.follow && LINES3[s.id] && !s.deep);
+  if (reg === 'ranch' && (tag || !G.flags.visitedHill)) drawEdgeArrow(604, 1240, 'Hill road', '#FFE14D', 'ranch');
   if (!tag) return;
-  if (reg === 'ranch') drawEdgeArrow(604, 1240, 'Hill road', '#FFE14D', 'ranch');
-  else if (reg === 'hill') { const wd = WINDOWS3.find((q) => q.id === LINES3[tag.id].win); if (wd) drawEdgeArrow(wd.x, WIN_Y, 'Window', '#FFE14D', 'hill'); }
+  if (reg === 'hill') { const wd = WINDOWS3.find((q) => q.id === LINES3[tag.id].win); if (wd) drawEdgeArrow(wd.x, WIN_Y, 'Window', '#FFE14D', 'hill'); }
 }
 
 /* ---------------- camera ---------------- */
@@ -5905,7 +5909,7 @@ function openRevealDialog3() {
 function openRevealDialog3b() {
   const freeze = touchMode ? 'hold Graze' : 'hold Shift';
   openDialog({ who: 'system', name: 'Through the glasses', text: 'Up the hill stands the Big House. Every light on. Every curtain shut. The pigs went in there, and nobody has seen them come out.', choices: [{ label: 'Continue', run: () => ({
-    who: 'system', name: 'Seeing is believing', text: "Your friends love the Farmer. They won't take your word for it this time: they have to see it with their own eyes. Take them up the hill to the windows. Up there, hounds sniff out anything that moves (" + freeze + ' to freeze), scarecrows notice glasses, and a searchlight never stops turning.',
+    who: 'system', name: 'Seeing is believing', text: "Your friends love the Farmer. They won't take your word for it this time: they have to see it with their own eyes. Take them up the hill to the windows: the main gate stands open now, and the hill road starts right outside it. Up there, hounds sniff out anything that moves (" + freeze + ' to freeze), scarecrows notice glasses, and a searchlight never stops turning.',
     choices: [{ label: 'Got it', run: () => {
       G.fade = { t: 0, dur: 0.9, fired: false, mid: () => { G.camTarget = null; updateCamera(0, true); if (G.cut) { G.cut.stage = 'back'; G.cut.t = 0; } } };
       return null;
@@ -5920,14 +5924,14 @@ function ch3Objective() {
   if (G.flags.march) {
     if (reg === 'house') setObjective(G.flags.metFarmer ? 'Talk to the Farmer.' : 'Find the Farmer. His study is at the back.', 'The hounds notice anything that moves. Hold ' + key + ' to freeze.');
     else if (reg === 'hill') setObjective('The whole flock is at the door.', 'The Big House is open. Go in and meet the Farmer.');
-    else setObjective('The whole flock went up the hill.', 'The hill road starts outside the main gate.');
+    else setObjective('The whole flock went up the hill.', 'Go out through the main gate. The hill road starts right outside it.');
     return;
   }
   const tag = tagger();
   if (tag) {
     const wd = WINDOWS3.find((q) => q.id === LINES3[tag.id].win), pron = LINES3[tag.id].pron;
     if (reg === 'hill') setObjective('Show ' + tag.name + ' ' + wd.name + '.', 'Stand at the window with ' + pron + ' right behind you.');
-    else if (reg === 'ranch') setObjective('Take ' + tag.name + ' up the hill.', 'Squeeze out through the hole in the east fence. The hill road starts outside the main gate.');
+    else if (reg === 'ranch') setObjective('Take ' + tag.name + ' up the hill.', 'Go out through the main gate, in the south fence. The hill road starts right outside it.');
     else setObjective(tag.name + ' is following you.', 'Take ' + pron + ' up the hill, to ' + wd.name + '.');
     return;
   }
@@ -5937,7 +5941,7 @@ function ch3Objective() {
   }
   if (reg === 'church') { setObjective('The pastor is napping mid-sermon.', 'Nobody in here needs waking today.'); return; }
   const need = Math.max(0, WOKE_GOAL - G.woke);
-  setObjective('Bring ' + need + ' more ' + (need === 1 ? 'friend' : 'friends') + ' up the hill to see for themselves.', G.hint || 'Ask your friends about the Farmer. Nobody has ever seen him.');
+  setObjective('Bring ' + need + ' more ' + (need === 1 ? 'friend' : 'friends') + ' up the hill to see for themselves.', G.hint || (G.flags.visitedHill ? 'Ask your friends about the Farmer. Nobody has ever seen him.' : 'Ask your friends about the Farmer. The hill road starts outside the main gate, which stands open now.'));
 }
 
 /* talking, chapter 3 */

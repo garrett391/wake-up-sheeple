@@ -17,6 +17,8 @@ for (const r of [[20, 3236, BIGH.x0, 3262], [BIGH.x1, 3236, 1480, 3262], [20, 32
 // hedges: cover from the searchlight and the scarecrows
 const HEDGES3 = [[190, 3420, 320, 3460], [1180, 3420, 1310, 3460], [400, 3580, 540, 3620], [960, 3580, 1100, 3620], [220, 3730, 360, 3770], [1140, 3730, 1280, 3770], [560, 3350, 690, 3384], [810, 3350, 940, 3384]];
 for (const h of HEDGES3) chOnly(solid(h[0], h[1], h[2], h[3], 'hedge', true), CH3);
+// in chapter 3 the main gate stands open: the hill road starts right outside it
+for (const b of solids) if (b.tag === 'gate') b.ch = [1, 2];
 const LAMP = { x: 750, y: 3650 };
 chOnly(solid(LAMP.x - 7, LAMP.y - 8, LAMP.x + 7, LAMP.y + 2, 'prop'), CH3);
 const SCARECROWS = [[150, 3560, 0], [1350, 3560, Math.PI], [410, 3300, 0.1], [1090, 3300, Math.PI - 0.1]];
